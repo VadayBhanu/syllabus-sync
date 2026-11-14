@@ -16,6 +16,9 @@ interface Props {
 
 type Source = "file" | "link" | "canvas" | "paste";
 
+// The GitHub Pages preview is a static build with no server routes.
+const STATIC_PREVIEW = process.env.NEXT_PUBLIC_STATIC === "1";
+
 const SOURCES: { id: Source; label: string }[] = [
   { id: "file", label: "PDF or file" },
   { id: "link", label: "Link" },
@@ -84,6 +87,12 @@ export default function Upload({ onText, onCalendar, onSamples, compact, ai, use
   async function importLink(kind: "link" | "canvas") {
     const url = link.trim();
     if (!url) return;
+    if (STATIC_PREVIEW) {
+      setError(kind === "canvas"
+        ? "This preview has no server to fetch links. Open the feed link in your browser to download the .ics file, then drop it in under \"PDF or file\"."
+        : "This preview has no server to fetch links. Download the PDF and drop it in, or paste the text.");
+      return;
+    }
     setError(null);
     setBusy("Fetching…");
     try {
@@ -218,7 +227,7 @@ export default function Upload({ onText, onCalendar, onSamples, compact, ai, use
       {error && <div className="notice error" role="alert">{error}</div>}
       <div className="row">
         {!compact && <button className="btn small primary" onClick={onSamples}>Try two sample UTA syllabi</button>}
-        {!compact && <a className="btn small" href="/samples/hist1311-syllabus.pdf" download>Get a sample PDF</a>}
+        {!compact && <a className="btn small" href={`${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}/samples/hist1311-syllabus.pdf`} download>Get a sample PDF</a>}
         {ai && setUseAi && (
           <label className="row small" style={{ gap: 6 }} title="Gemini reads messy layouts; every date it finds is checked against the syllabus text">
             <input type="checkbox" checked={!!useAi} onChange={(e) => setUseAi(e.target.checked)} /> Read with Gemini

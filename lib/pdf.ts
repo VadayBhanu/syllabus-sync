@@ -11,7 +11,7 @@ const MAX_BYTES = 20 * 1024 * 1024;
 export async function extractPdfText(file: File): Promise<{ text: string; pages: number }> {
   if (file.size > MAX_BYTES) throw new PdfError("That PDF is over 20 MB. Syllabi are usually much smaller, so this might be the wrong file.", "too-big");
   const pdfjs = await import("pdfjs-dist");
-  pdfjs.GlobalWorkerOptions.workerSrc = "/pdf.worker.min.mjs";
+  pdfjs.GlobalWorkerOptions.workerSrc = `${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}/pdf.worker.min.mjs`;
 
   const data = new Uint8Array(await file.arrayBuffer());
   let doc;
