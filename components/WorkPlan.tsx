@@ -17,11 +17,12 @@ interface Props {
   onChange: (s: StudySession) => void;
   onDelete: (id: string) => void;
   onRebuild: () => void;
+  onFocus: (s: StudySession) => void;
 }
 
 const RANGE_OPTIONS = [7, 14, 28];
 
-export default function WorkPlan({ sessions, events, courses, today, dailyMinutes, weekends, onOptions, onChange, onDelete, onRebuild }: Props) {
+export default function WorkPlan({ sessions, events, courses, today, dailyMinutes, weekends, onOptions, onChange, onDelete, onRebuild, onFocus }: Props) {
   const [range, setRange] = useState(14);
   const load = dayLoad(sessions);
   const days: string[] = [];
@@ -119,6 +120,7 @@ export default function WorkPlan({ sessions, events, courses, today, dailyMinute
                       <option key={m} value={m}>{fmtMinutes(m)}</option>
                     ))}
                   </select>
+                  {!s.done && <button className="btn small" onClick={() => onFocus(s)} title="Start a focus timer for this session">⛵ Focus</button>}
                   <button className="btn small ghost" onClick={() => move(s, -1)} disabled={s.date <= today} aria-label="Move a day earlier">‹</button>
                   <button className="btn small ghost" onClick={() => move(s, 1)} aria-label="Move a day later">›</button>
                   <button className="btn small ghost danger" onClick={() => onDelete(s.id)} aria-label="Remove session">×</button>

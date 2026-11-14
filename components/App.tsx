@@ -21,11 +21,13 @@ import Hazards from "./Hazards";
 import WorkPlan from "./WorkPlan";
 import CloudSync from "./CloudSync";
 import Blaze from "./Blaze";
+import MastMode from "./MastMode";
+import Oracle from "./Oracle";
 import { applyAction } from "@/lib/actions";
 import { buildPlan, type StudySession } from "@/lib/plan";
 import { ymd } from "@/lib/dates";
 
-type View = "voyage" | "plan" | "calendar" | "list";
+type View = "voyage" | "plan" | "oracle" | "calendar" | "list";
 
 interface ImportNote {
   course: string;
@@ -45,6 +47,7 @@ export default function App() {
   const [ready, setReady] = useState(false);
   const [confirmRemove, setConfirmRemove] = useState<string | null>(null);
   const [sessions, setSessions] = useState<StudySession[]>([]);
+  const [focus, setFocus] = useState<{ session: StudySession | null } | null>(null);
   const [planOpts, setPlanOpts] = useState({ dailyMinutes: 180, weekends: true });
   const [server, setServer] = useState({ ai: false, sync: false });
   const [useAi, setUseAi] = useState(true);
@@ -275,6 +278,7 @@ export default function App() {
         </div>
         {!empty && (
           <div className="row">
+            <button className="btn" onClick={() => setFocus({ session: null })} title="Focus timer">⛵ Mast mode</button>
             <button className="btn" onClick={() => setEditing("new")}>+ Add deadline</button>
             <button className="btn primary" onClick={exportIcs} disabled={!visible.length}>Export to calendar (.ics)</button>
           </div>
@@ -336,9 +340,9 @@ export default function App() {
 
           <div className="row">
             <div className="tabs" role="tablist" aria-label="View">
-              {(["voyage", "plan", "calendar", "list"] as View[]).map((v) => (
+              {(["voyage", "plan", "oracle", "calendar", "list"] as View[]).map((v) => (
                 <button key={v} role="tab" className="tab" aria-selected={view === v} onClick={() => setView(v)}>
-                  {v === "voyage" ? "Voyage map" : v === "plan" ? "Work plan" : v === "calendar" ? "Calendar" : "All deadlines"}
+                  {v === "voyage" ? "Voyage map" : v === "plan" ? "Work plan" : v === "oracle" ? "The Oracle" : v === "calendar" ? "Calendar" : "All deadlines"}
                 </button>
               ))}
             </div>
@@ -359,8 +363,10 @@ export default function App() {
                   onChange={(x) => setSessions((ss) => ss.map((y) => (y.id === x.id ? x : y)))}
                   onDelete={(id) => setSessions((ss) => ss.map((y) => (y.id === id ? { ...y, removed: true, pinned: true } : y)))}
                   onRebuild={() => rebuild(false)}
+                  onFocus={(x) => setFocus({ session: x })}
                 />
               )}
+              {view === "oracle" && <Oracle courses={courses} />}
               {view === "calendar" && <CalendarView events={visible} hazards={hazards} courses={courseById} now={now} onOpen={(e) => setEditing(e)} />}
               {view === "list" && <EventList events={visible} hazards={hazards} courses={courseById} onOpen={(e) => setEditing(e)} onToggle={toggleDone} />}
             </div>
@@ -394,6 +400,21 @@ export default function App() {
         />
       )}
       {toast && <div className="toast" role="status">{toast}</div>}
+      {focus && (
+        <MastMode
+          session={focus.session}
+          onClose={() => setFocus(null)}
+          onComplete={(x, minutes) => {
+            if (!x) return;
+            // a session counts as done once you've put in most of it; otherwise shrink what's left
+            setSessions((ss) =>
+              ss.map((y) =>
+                y.id !== x.id ? y : minutes >= y.minutes * 0.6 ? { ...y, done: true, pinned: true } : { ...y, minutes: Math.max(15, y.minutes - minutes), pinned: true },
+              ),
+            );
+          }}
+        />
+      )}
       {ready && (
         <Blaze
           courses={courses}

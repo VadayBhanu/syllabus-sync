@@ -223,3 +223,20 @@ select.btn { padding-right: 6px; }
 .action.skipped { opacity: 0.55; }
 .action.failed { border-color: var(--danger); color: var(--danger); }
 .action .grow { min-width: 60%; }
+
+/* mast mode */
+.mast-scrim { z-index: 70; }
+.mast { width: min(520px, 100%); display: grid; gap: 12px; }
+.mast-scene { width: 100%; height: auto; display: block; }
+.mast-time { font-family: Fraunces, Georgia, serif; font-size: 64px; font-weight: 700; text-align: center; line-height: 1; font-variant-numeric: tabular-nums; }
+
+/* oracle */
+.oracle-verdict { border-radius: 12px; padding: 14px 16px; font-size: 15px; background: var(--sea); }
+.oracle-verdict.warn { background: var(--warn-bg); }
+.oracle-verdict.danger { background: var(--danger-bg); color: var(--danger); }
+.oracle-now { font-family: Fraunces, Georgia, serif; font-size: 34px; font-weight: 700; line-height: 1.1; margin-bottom: 4px; }
+.oracle-now span { font-family: Inter, sans-serif; font-size: 14px; font-weight: 500; color: var(--muted); }
+.oracle-table { width: 100%; border-collapse: collapse; font-size: 14px; }
+.oracle-table th { text-align: left; font-size: 12px; color: var(--muted); font-weight: 500; padding: 4px 6px; border-bottom: 1px solid var(--line); }
+.oracle-table td { padding: 5px 6px; border-bottom: 1px solid var(--line); }
+.textin.num { width: 90px; flex: none; }
