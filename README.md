@@ -8,7 +8,12 @@ Built solo at HackUTA 2026 (theme: Homer's *Odyssey*).
 
 ## What it does
 
-- **Drop in syllabus PDFs** (several at once). Text is extracted in the browser with pdf.js. Text files and pasted text work too.
+- **Bring your syllabus in any way you have it.**
+  - Drop in PDFs (several at once). Text is extracted in the browser with pdf.js.
+  - Paste a link to a public syllabus page or PDF.
+  - Paste your UTA Canvas **calendar feed** link (Canvas → Calendar → Calendar Feed). Every assignment and exam from all your courses comes in, grouped by course. No password needed.
+  - Paste anything else: a Canvas page, your MyMav class schedule, your own notes. Pages behind a university login can't be fetched, and SyllabusSync never asks for your university password, so copy and paste works for those.
+  - Everything you add becomes something Blaze can answer questions about.
 - **Finds the dates.** A pattern parser handles `Sep 4`, `Sept. 4th`, `September 4, 2026`, `9/4`, `09/04/26`, `2026-09-04`, `4 September`, `the 4th of September`, ranges like `Nov 25-27`, times like `11:59 PM`, `noon`, `midnight`, and grade weights like `(25%)`.
 - **Works out the year.** Most syllabi never write it. We read the term ("Fall 2026", "2026 Fall", "Fall '26") and pick the year that puts each date inside that term, so a January date in a fall syllabus lands in the next year.
 - **Optional Gemini pass for messy syllabi.** Gemini returns structured deadlines, and each one has to quote the line it came from. We check every quote against the actual text and re-parse the date out of it. Anything that doesn't match is flagged, and anything the AI missed but the pattern parser found is still added for review.
@@ -18,7 +23,7 @@ Built solo at HackUTA 2026 (theme: Homer's *Odyssey*).
   - **Siren song:** something due on a day the syllabus says there's no class (usually a typo worth asking about).
   - **Safe harbor:** a holiday week.
 - **Work plan.** Turns deadlines into study sessions spread over the days before each one, within the hours you say you have per day. Overloaded days are flagged. Sessions can be renamed, resized, moved, finished or deleted, and anything you touch stays put when the plan rebalances.
-- **Blaze, the wooden horse.** The Greeks hid soldiers inside a horse; your answers are hiding inside your syllabi. Blaze is a study assistant drawn as a little wooden horse on wheels. Ask anything about your classes in plain English: "how is my grade calculated?", "what's the late policy?", "what should I do this week?", then keep going with follow-ups like "and when is that exam?". Blaze answers only from your syllabi, deadlines and study plan (Gemini, with the conversation as history), shows the exact syllabus line behind each answer, and we check that each quoted line really exists. Without a Gemini key it still answers deadline questions and searches your syllabi.
+- **Blaze, the wooden horse.** The Greeks hid soldiers inside a horse; your answers are hiding inside your syllabi. Blaze is a study assistant drawn as a little wooden horse on wheels. Ask anything about your classes in plain English: "how is my grade calculated?", "what's the late policy?", "what should I do this week?", then keep going with follow-ups like "and when is that exam?". Blaze can also act on your schedule: "plan my next 3 days", "move my Exam 3 study session to Monday", "add my ACM meeting Thursday at 6", "export my calendar". Every change shows up as a card you Apply or Skip, so nothing changes without you. Blaze answers only from your syllabi, deadlines and study plan (Gemini, with the conversation as history), shows the exact syllabus line behind each answer, and we check that each quoted line really exists. Without a Gemini key it still answers deadline questions and searches your syllabi.
 - **Calendar, list and countdowns.** Month calendar, a full list with a "needs a look" filter for low-confidence items, and live countdowns to the next deadlines.
 - **Export to any calendar.** RFC 5545 `.ics` with reminders (2 days before exams and projects, 1 day before everything else).
 - **Take it with you (optional).** With MongoDB configured, your courses, deadlines and study sessions sync to a short voyage code like `ithaca-x7k2m9` that you can open on another device.

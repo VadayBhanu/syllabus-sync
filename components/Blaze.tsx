@@ -3,23 +3,26 @@
 import { useEffect, useRef, useState } from "react";
 import type { Course, SyllabusEvent } from "@/lib/types";
 import type { StudySession } from "@/lib/plan";
-import { buildContext, checkCitations, offlineAnswer, type BlazeMessage } from "@/lib/blaze";
+import { buildContext, checkCitations, offlineAnswer, type BlazeAction, type BlazeMessage } from "@/lib/blaze";
 
 interface Props {
   courses: Course[];
   events: SyllabusEvent[];
   sessions: StudySession[];
   online: boolean;
+  dailyMinutes: number;
+  /** apply one confirmed action; returns an error message if it couldn't */
+  onAction: (a: BlazeAction) => string | undefined;
 }
 
 const STARTERS = [
   "What do I need to do this week?",
   "How is my grade calculated in each class?",
-  "What's the late work policy?",
+  "Plan my study time for the next 3 days",
   "When and where is my next exam?",
 ];
 
-export default function Blaze({ courses, events, sessions, online }: Props) {
+export default function Blaze({ courses, events, sessions, online, dailyMinutes, onAction }: Props) {
   const [open, setOpen] = useState(false);
   const [msgs, setMsgs] = useState<BlazeMessage[]>([]);
   const [input, setInput] = useState("");
@@ -55,12 +58,18 @@ export default function Blaze({ courses, events, sessions, online }: Props) {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             messages: history.map((m) => ({ role: m.role, text: m.text })),
-            context: buildContext(courses, events, sessions),
+            context: buildContext(courses, events, sessions, new Date(), dailyMinutes),
           }),
         });
         const data = await res.json();
         if (res.ok) {
-          reply = { role: "blaze", text: data.answer, citations: checkCitations(data.citations ?? [], courses), followUps: data.followUps };
+          reply = {
+            role: "blaze",
+            text: data.answer,
+            citations: checkCitations(data.citations ?? [], courses),
+            followUps: data.followUps,
+            actions: (data.actions ?? []).filter((a: BlazeAction) => a?.type && a?.summary).map((a: BlazeAction) => ({ ...a, status: "pending" as const })),
+          };
         } else {
           reply = { ...offlineAnswer(question, courses, events), text: `${data.error ?? "Blaze is offline."} Here's what I can find on my own:\n\n${offlineAnswer(question, courses, events).text}` };
         }
@@ -73,6 +82,22 @@ export default function Blaze({ courses, events, sessions, online }: Props) {
   }
 
   const last = msgs[msgs.length - 1];
+
+  // Apply (or skip) one of Blaze's proposed changes, or all pending ones in a message.
+  function resolve(mi: number, which: number | "all", apply: boolean) {
+    setMsgs((ms) =>
+      ms.map((m, i) => {
+        if (i !== mi || !m.actions) return m;
+        const actions = m.actions.map((a, k) => {
+          if ((which !== "all" && k !== which) || a.status !== "pending") return a;
+          if (!apply) return { ...a, status: "skipped" as const };
+          const err = onAction(a);
+          return err ? { ...a, status: "failed" as const, error: err } : { ...a, status: "applied" as const };
+        });
+        return { ...m, actions };
+      }),
+    );
+  }
 
   return (
     <>
@@ -109,6 +134,27 @@ export default function Blaze({ courses, events, sessions, online }: Props) {
                 {m.role === "blaze" && <span className="avatar"><Horse size={22} /></span>}
               <div className={`bubble from-${m.role}`}>
                 <div style={{ whiteSpace: "pre-wrap" }}>{m.text}</div>
+                {m.actions && m.actions.length > 0 && (
+                  <div className="actions">
+                    <div className="tiny muted">Blaze wants to make {m.actions.length === 1 ? "this change" : `${m.actions.length} changes`}. Nothing happens until you apply.</div>
+                    {m.actions.map((a, k) => (
+                      <div key={k} className={`action ${a.status}`}>
+                        <span className="grow">{a.summary}</span>
+                        {a.status === "pending" ? (
+                          <>
+                            <button className="btn small primary" onClick={() => resolve(i, k, true)}>Apply</button>
+                            <button className="btn small ghost" onClick={() => resolve(i, k, false)}>Skip</button>
+                          </>
+                        ) : (
+                          <span className="tiny">{a.status === "applied" ? "✓ Done" : a.status === "skipped" ? "Skipped" : `Couldn't: ${a.error}`}</span>
+                        )}
+                      </div>
+                    ))}
+                    {m.actions.filter((a) => a.status === "pending").length > 1 && (
+                      <button className="btn small" onClick={() => resolve(i, "all", true)}>Apply all</button>
+                    )}
+                  </div>
+                )}
                 {m.citations && m.citations.length > 0 && (
                   <div className="cites">
                     {m.citations.map((c, k) => (

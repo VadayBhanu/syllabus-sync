@@ -1,10 +1,11 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { Course, ParseReport, SyllabusEvent } from "@/lib/types";
 import { GRADED } from "@/lib/types";
 import { parseSyllabus } from "@/lib/parser";
 import { verifyAi } from "@/lib/verify";
+import { icsGroupText, type IcsCourseGroup } from "@/lib/icsImport";
 import type { ParseResult } from "@/lib/types";
 import { findHazards } from "@/lib/conflicts";
 import { buildIcs } from "@/lib/ics";
@@ -20,6 +21,7 @@ import Hazards from "./Hazards";
 import WorkPlan from "./WorkPlan";
 import CloudSync from "./CloudSync";
 import Blaze from "./Blaze";
+import { applyAction } from "@/lib/actions";
 import { buildPlan, type StudySession } from "@/lib/plan";
 import { ymd } from "@/lib/dates";
 
@@ -124,9 +126,9 @@ export default function App() {
   const courseById = useMemo(() => new Map(courses.map((c) => [c.id, c])), [courses]);
 
   const importText = useCallback(
-    async (text: string, fileName: string) => {
+    async (text: string, fileName: string, asCode?: string) => {
       const result = await extract(text);
-      const code = result.courseCode ?? fileName.replace(/\.[a-z]+$/i, "").slice(0, 24) ?? "Course";
+      const code = asCode ?? result.courseCode ?? fileName.replace(/\.[a-z]+$/i, "").slice(0, 24) ?? "Course";
       // re-importing the same course replaces it instead of doubling every deadline
       const existing = courses.find((c) => c.code === code);
       const courseId = existing?.id ?? uid("c");
@@ -150,10 +152,37 @@ export default function App() {
       setToast(
         result.events.length
           ? `${code}: ${result.events.length} items charted${existing ? " (replaced the old import)" : ""}`
-          : `${code}: no deadlines found. You can add them by hand.`,
+          : asCode
+            ? `${code}: saved. Blaze can answer questions about it.`
+            : `${code}: no deadlines found. You can add them by hand.`,
       );
     },
     [courses, extract],
+  );
+
+  // Calendar feeds (Canvas etc.) arrive already structured: one course per bracketed course code.
+  const importCalendar = useCallback(
+    (groups: IcsCourseGroup[], label: string) => {
+      let cs = [...courses];
+      let es = [...events];
+      let total = 0;
+      for (const g of groups) {
+        const existing = cs.find((c) => c.code === g.code);
+        const id = existing?.id ?? uid("c");
+        const c: Course = existing
+          ? { ...existing, text: [existing.text, icsGroupText(g)].filter(Boolean).join("\n\n").slice(0, 40_000) }
+          : { id, code: g.code, name: g.name, color: COURSE_COLORS[cs.length % COURSE_COLORS.length], fileName: label, text: icsGroupText(g) };
+        cs = existing ? cs.map((x) => (x.id === id ? c : x)) : [...cs, c];
+        // skip items we already have (same course, same day, similar title)
+        const fresh = g.events.filter((e) => !es.some((x) => x.courseId === id && x.date === e.date && x.title.toLowerCase().slice(0, 12) === e.title.toLowerCase().slice(0, 12)));
+        es = [...es, ...fresh.map((e) => ({ ...e, id: uid(), courseId: id }))];
+        total += fresh.length;
+      }
+      setCourses(cs);
+      setEvents(es);
+      setToast(`${label}: ${total} new item${total === 1 ? "" : "s"} from ${groups.length} course${groups.length === 1 ? "" : "s"}`);
+    },
+    [courses, events],
   );
 
   const loadSamples = () => {
@@ -228,6 +257,8 @@ export default function App() {
     setConfirmRemove(null);
   };
 
+  const latest = useRef({ courses, events, sessions, plan: planOpts });
+  latest.current = { courses, events, sessions, plan: planOpts };
   const syncState = useMemo(() => ({ courses, events, sessions, plan: planOpts }), [courses, events, sessions, planOpts]);
   const empty = ready && courses.length === 0;
   const graded = visible.filter((e) => GRADED.includes(e.kind));
@@ -260,7 +291,7 @@ export default function App() {
               calendar. Your files stay in your browser.
             </p>
           </div>
-          <Upload onText={importText} onSamples={loadSamples} ai={server.ai} useAi={useAi} setUseAi={setUseAi} />
+          <Upload onText={importText} onCalendar={importCalendar} onSamples={loadSamples} ai={server.ai} useAi={useAi} setUseAi={setUseAi} />
         </section>
       ) : (
         <div className="stack">
@@ -346,7 +377,7 @@ export default function App() {
                   }}
                 />
               )}
-              <Upload compact onText={importText} onSamples={loadSamples} ai={server.ai} useAi={useAi} setUseAi={setUseAi} />
+              <Upload compact onText={importText} onCalendar={importCalendar} onSamples={loadSamples} ai={server.ai} useAi={useAi} setUseAi={setUseAi} />
             </aside>
           </div>
         </div>
@@ -363,7 +394,34 @@ export default function App() {
         />
       )}
       {toast && <div className="toast" role="status">{toast}</div>}
-      {ready && <Blaze courses={courses} events={events} sessions={sessions} online={server.ai} />}
+      {ready && (
+        <Blaze
+          courses={courses}
+          events={events}
+          sessions={sessions}
+          online={server.ai}
+          dailyMinutes={planOpts.dailyMinutes}
+          onAction={(a) => {
+            if (a.type === "export_calendar") {
+              exportIcs();
+              return undefined;
+            }
+            if (a.type === "rebalance_plan") {
+              rebuild(false);
+              return undefined;
+            }
+            // several actions can be applied in one go, so chain them off the latest state
+            const r = applyAction(latest.current, a, (p) => uid(p));
+            if (r.error || !r.state) return r.error ?? "Couldn't apply that.";
+            latest.current = r.state;
+            setCourses(r.state.courses);
+            setEvents(r.state.events);
+            setSessions(r.state.sessions);
+            setPlanOpts(r.state.plan);
+            return undefined;
+          }}
+        />
+      )}
 
       <footer className="footer">
         Built solo at HackUTA 2026. Syllabus files are read in your browser and never uploaded anywhere.

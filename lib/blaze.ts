@@ -14,11 +14,39 @@ export interface BlazeCitation {
   verified?: boolean;
 }
 
+export type BlazeActionType =
+  | "add_deadline"
+  | "update_deadline"
+  | "remove_deadline"
+  | "mark_done"
+  | "add_session"
+  | "move_session"
+  | "remove_session"
+  | "set_daily_hours"
+  | "rebalance_plan"
+  | "export_calendar";
+
+/** A change Blaze proposes. Nothing happens until the student presses Apply. */
+export interface BlazeAction {
+  type: BlazeActionType;
+  summary: string;
+  id?: string;
+  course?: string;
+  title?: string;
+  date?: string;
+  time?: string;
+  kind?: string;
+  minutes?: number;
+  status?: "pending" | "applied" | "skipped" | "failed";
+  error?: string;
+}
+
 export interface BlazeMessage {
   role: "user" | "blaze";
   text: string;
   citations?: BlazeCitation[];
   followUps?: string[];
+  actions?: BlazeAction[];
   offline?: boolean;
 }
 
@@ -27,27 +55,29 @@ export interface BlazeContext {
   courses: { code: string; name: string; term?: string; text: string }[];
   deadlines: string[];
   plan: string[];
+  dailyMinutes?: number;
 }
 
 const MAX_TEXT_PER_COURSE = 25_000;
 
-export function buildContext(courses: Course[], events: SyllabusEvent[], sessions: StudySession[], now = new Date()): BlazeContext {
+export function buildContext(courses: Course[], events: SyllabusEvent[], sessions: StudySession[], now = new Date(), dailyMinutes?: number): BlazeContext {
   const today = ymd(now);
   const byId = new Map(courses.map((c) => [c.id, c]));
   const deadlines = [...events]
     .sort((a, b) => a.date.localeCompare(b.date))
     .map((e) => {
       const c = byId.get(e.courseId)?.code ?? "?";
-      return `${e.date}${e.endDate ? " to " + e.endDate : ""}${e.time ? " " + e.time : ""} | ${c} | ${KIND_LABEL[e.kind]} | ${e.title}${e.weight ? ` | ${e.weight}%` : ""}${e.done ? " | DONE" : ""}`;
+      return `[${e.id}] ${e.date}${e.endDate ? " to " + e.endDate : ""}${e.time ? " " + e.time : ""} | ${c} | ${KIND_LABEL[e.kind]} | ${e.title}${e.weight ? ` | ${e.weight}%` : ""}${e.done ? " | DONE" : ""}`;
     });
   const plan = sessions
     .filter((s) => !s.removed && s.date >= today && s.date <= addDays(today, 14))
-    .map((s) => `${s.date} | ${byId.get(s.courseId)?.code ?? "?"} | ${s.label} | ${s.minutes} min${s.done ? " | DONE" : ""}`);
+    .map((s) => `[${s.id}] ${s.date} | ${byId.get(s.courseId)?.code ?? "?"} | ${s.label} | ${s.minutes} min${s.done ? " | DONE" : ""}`);
   return {
     today,
     courses: courses.map((c) => ({ code: c.code, name: c.name, term: c.term, text: (c.text ?? "").slice(0, MAX_TEXT_PER_COURSE) })),
     deadlines,
     plan,
+    dailyMinutes,
   };
 }
 

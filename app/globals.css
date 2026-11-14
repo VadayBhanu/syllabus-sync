@@ -211,3 +211,15 @@ select.btn { padding-right: 6px; }
   .blaze { right: 0; bottom: 0; width: 100vw; height: 100dvh; border-radius: 0; }
   .blaze-fab { right: 16px; bottom: 16px; }
 }
+
+/* source picker */
+.srcs { display: flex; flex-wrap: wrap; gap: 6px; }
+.src { border: 1px solid var(--line); background: var(--panel); border-radius: 999px; padding: 4px 11px; font-size: 13px; cursor: pointer; }
+.src[aria-selected="true"] { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+.textin { flex: 1; min-width: 0; border: 1px solid var(--line); border-radius: 8px; padding: 6px 10px; background: var(--bg); }
+.actions { margin-top: 8px; display: grid; gap: 6px; }
+.action { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; padding: 6px 8px; border: 1px solid var(--line); border-radius: 8px; background: var(--panel); font-size: 13px; }
+.action.applied { border-color: var(--ok); color: var(--ok); }
+.action.skipped { opacity: 0.55; }
+.action.failed { border-color: var(--danger); color: var(--danger); }
+.action .grow { min-width: 60%; }
