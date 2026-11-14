@@ -40,6 +40,8 @@ export interface Course {
   color: string;
   term?: string;
   fileName?: string;
+  /** extracted syllabus text, kept so Blaze can answer questions about it */
+  text?: string;
 }
 
 export interface ParseReport {

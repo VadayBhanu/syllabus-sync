@@ -18,6 +18,7 @@ Built solo at HackUTA 2026 (theme: Homer's *Odyssey*).
   - **Siren song:** something due on a day the syllabus says there's no class (usually a typo worth asking about).
   - **Safe harbor:** a holiday week.
 - **Work plan.** Turns deadlines into study sessions spread over the days before each one, within the hours you say you have per day. Overloaded days are flagged. Sessions can be renamed, resized, moved, finished or deleted, and anything you touch stays put when the plan rebalances.
+- **Blaze, your study assistant.** Ask anything about your classes in plain English: "how is my grade calculated?", "what's the late policy?", "what should I do this week?", then keep going with follow-ups like "and when is that exam?". Blaze answers only from your syllabi, deadlines and study plan (Gemini, with the conversation as history), shows the exact syllabus line behind each answer, and we check that each quoted line really exists. Without a Gemini key it still answers deadline questions and searches your syllabi.
 - **Calendar, list and countdowns.** Month calendar, a full list with a "needs a look" filter for low-confidence items, and live countdowns to the next deadlines.
 - **Export to any calendar.** RFC 5545 `.ics` with reminders (2 days before exams and projects, 1 day before everything else).
 - **Take it with you (optional).** With MongoDB configured, your courses, deadlines and study sessions sync to a short voyage code like `ithaca-x7k2m9` that you can open on another device.
@@ -48,7 +49,7 @@ Optional environment variables (see `.env.example`):
 
 | Variable | What it enables |
 | --- | --- |
-| `GEMINI_API_KEY` | "Read with Gemini" toggle on upload |
+| `GEMINI_API_KEY` | "Read with Gemini" on upload, and Blaze's full chat mode |
 | `GEMINI_MODEL` | Override the model (default `gemini-2.5-flash`) |
 | `MONGODB_URI` | Cloud sync of courses, deadlines and study sessions |
 | `MONGODB_DB` | Database name (default `syllabus_sync`) |

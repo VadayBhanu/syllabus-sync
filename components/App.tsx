@@ -19,6 +19,7 @@ import EventEditor from "./EventEditor";
 import Hazards from "./Hazards";
 import WorkPlan from "./WorkPlan";
 import CloudSync from "./CloudSync";
+import Blaze from "./Blaze";
 import { buildPlan, type StudySession } from "@/lib/plan";
 import { ymd } from "@/lib/dates";
 
@@ -137,6 +138,7 @@ export default function App() {
         color,
         term: result.term,
         fileName,
+        text: text.slice(0, 40_000),
       };
       const newEvents: SyllabusEvent[] = result.events.map((e) => ({ ...e, id: uid(), courseId }));
       setCourses((cs) => (existing ? cs.map((c) => (c.id === courseId ? course : c)) : [...cs, course]));
@@ -164,7 +166,7 @@ export default function App() {
       const code = r.courseCode ?? s.label;
       const existing = cs.find((c) => c.code === code);
       const id = existing?.id ?? uid("c");
-      const c: Course = { id, code, name: r.courseName ?? "", color: existing?.color ?? COURSE_COLORS[cs.length % COURSE_COLORS.length], term: r.term, fileName: s.fileName };
+      const c: Course = { id, code, name: r.courseName ?? "", color: existing?.color ?? COURSE_COLORS[cs.length % COURSE_COLORS.length], term: r.term, fileName: s.fileName, text: s.text };
       cs = existing ? cs.map((x) => (x.id === id ? c : x)) : [...cs, c];
       es = [...es.filter((e) => e.courseId !== id), ...r.events.map((e) => ({ ...e, id: uid(), courseId: id }))];
       ns.push({ course: code, report: r.report, review: r.events.filter((e) => e.confidence !== "high").length });
@@ -361,6 +363,7 @@ export default function App() {
         />
       )}
       {toast && <div className="toast" role="status">{toast}</div>}
+      {ready && <Blaze courses={courses} events={events} sessions={sessions} online={server.ai} />}
 
       <footer className="footer">
         Built solo at HackUTA 2026. Syllabus files are read in your browser and never uploaded anywhere.
