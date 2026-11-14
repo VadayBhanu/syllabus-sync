@@ -27,6 +27,55 @@ export default function Blaze({ courses, events, sessions, online, dailyMinutes,
   const [msgs, setMsgs] = useState<BlazeMessage[]>([]);
   const [input, setInput] = useState("");
   const [busy, setBusy] = useState(false);
+  // Voice: browser speech recognition to ask, speech synthesis to answer. No keys needed.
+  const [speak, setSpeak] = useState(false);
+  const [listening, setListening] = useState(false);
+  const [canListen, setCanListen] = useState(false);
+  const recog = useRef<SpeechRec | null>(null);
+  const speakRef = useRef(false);
+  speakRef.current = speak;
+  useEffect(() => {
+    const w = window as unknown as { SpeechRecognition?: new () => SpeechRec; webkitSpeechRecognition?: new () => SpeechRec };
+    setCanListen(!!(w.SpeechRecognition || w.webkitSpeechRecognition));
+  }, []);
+
+  function say(text: string) {
+    try {
+      if (!("speechSynthesis" in window)) return;
+      window.speechSynthesis.cancel();
+      const u = new SpeechSynthesisUtterance(text.replace(/[•“”]/g, "").slice(0, 600));
+      u.rate = 1.03;
+      window.speechSynthesis.speak(u);
+    } catch {}
+  }
+
+  function listen() {
+    const w = window as unknown as { SpeechRecognition?: new () => SpeechRec; webkitSpeechRecognition?: new () => SpeechRec };
+    const R = w.SpeechRecognition || w.webkitSpeechRecognition;
+    if (!R) return;
+    if (listening) {
+      recog.current?.stop();
+      return;
+    }
+    const r = new R();
+    r.lang = "en-US";
+    r.interimResults = true;
+    r.onresult = (e) => {
+      const res = e.results[e.results.length - 1];
+      const t = res[0].transcript;
+      setInput(t);
+      if (res.isFinal) {
+        r.stop();
+        setSpeak(true);
+        ask(t);
+      }
+    };
+    r.onend = () => setListening(false);
+    r.onerror = () => setListening(false);
+    recog.current = r;
+    setListening(true);
+    r.start();
+  }
   const scroller = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
@@ -78,6 +127,7 @@ export default function Blaze({ courses, events, sessions, online, dailyMinutes,
       }
     }
     setMsgs((m) => [...m, reply]);
+    if (speakRef.current) say(reply.text + (reply.actions?.length ? " I've lined up some changes for you to confirm." : ""));
     setBusy(false);
   }
 
@@ -114,6 +164,17 @@ export default function Blaze({ courses, events, sessions, online, dailyMinutes,
               <b>Blaze</b>
               <div className="tiny muted">{online ? "The wooden horse with your answers inside · Gemini" : "Offline mode: deadlines and syllabus search"}</div>
             </div>
+            <button
+              className="btn ghost small"
+              aria-pressed={speak}
+              title={speak ? "Blaze reads answers aloud" : "Turn on spoken answers"}
+              onClick={() => {
+                if (speak) window.speechSynthesis?.cancel();
+                setSpeak(!speak);
+              }}
+            >
+              {speak ? "🔊" : "🔈"}
+            </button>
             {msgs.length > 0 && <button className="btn ghost small" onClick={() => setMsgs([])}>New chat</button>}
             <button className="btn ghost small" onClick={() => setOpen(false)} aria-label="Close Blaze">×</button>
           </header>
@@ -200,6 +261,11 @@ export default function Blaze({ courses, events, sessions, online, dailyMinutes,
                 aria-label="Message Blaze"
                 className="blaze-input"
               />
+              {canListen && (
+                <button type="button" className={`btn ${listening ? "listening" : ""}`} onClick={listen} aria-label={listening ? "Stop listening" : "Ask Blaze out loud"} title="Ask out loud">
+                  {listening ? "● Listening" : "🎙"}
+                </button>
+              )}
               <button className="btn primary" disabled={!input.trim() || busy}>Send</button>
             </form>
           </div>
@@ -234,4 +300,14 @@ export function Horse({ size = 26 }: { size?: number }) {
       <circle cx="27.6" cy="6.2" r="0.7" fill="#2a1808" />
     </svg>
   );
+}
+
+interface SpeechRec {
+  lang: string;
+  interimResults: boolean;
+  onresult: ((e: { results: { isFinal: boolean; 0: { transcript: string } }[] & { length: number } }) => void) | null;
+  onend: (() => void) | null;
+  onerror: (() => void) | null;
+  start: () => void;
+  stop: () => void;
 }

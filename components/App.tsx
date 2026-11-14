@@ -23,6 +23,7 @@ import CloudSync from "./CloudSync";
 import Blaze from "./Blaze";
 import MastMode from "./MastMode";
 import Oracle from "./Oracle";
+import Tour from "./Tour";
 import { applyAction } from "@/lib/actions";
 import { buildPlan, type StudySession } from "@/lib/plan";
 import { ymd } from "@/lib/dates";
@@ -47,6 +48,7 @@ export default function App() {
   const [ready, setReady] = useState(false);
   const [confirmRemove, setConfirmRemove] = useState<string | null>(null);
   const [sessions, setSessions] = useState<StudySession[]>([]);
+  const [touring, setTouring] = useState(false);
   const [focus, setFocus] = useState<{ session: StudySession | null } | null>(null);
   const [planOpts, setPlanOpts] = useState({ dailyMinutes: 180, weekends: true });
   const [server, setServer] = useState({ ai: false, sync: false });
@@ -278,7 +280,8 @@ export default function App() {
         </div>
         {!empty && (
           <div className="row">
-            <button className="btn" onClick={() => setFocus({ session: null })} title="Focus timer">⛵ Mast mode</button>
+            <button className="btn" onClick={() => setTouring(true)}>Take the tour</button>
+            <button className="btn mast-btn" onClick={() => setFocus({ session: null })} title="Focus timer">⛵ Mast mode</button>
             <button className="btn" onClick={() => setEditing("new")}>+ Add deadline</button>
             <button className="btn primary" onClick={exportIcs} disabled={!visible.length}>Export to calendar (.ics)</button>
           </div>
@@ -295,7 +298,12 @@ export default function App() {
               calendar. Your files stay in your browser.
             </p>
           </div>
+          <div className="stack" style={{ gap: 10 }}>
+          <button className="btn primary" style={{ justifySelf: "start", padding: "10px 18px" }} onClick={() => { loadSamples(); setTouring(true); }}>
+            ▶ Take the 60-second guided demo
+          </button>
           <Upload onText={importText} onCalendar={importCalendar} onSamples={loadSamples} ai={server.ai} useAi={useAi} setUseAi={setUseAi} />
+          </div>
         </section>
       ) : (
         <div className="stack">
@@ -371,7 +379,16 @@ export default function App() {
               {view === "list" && <EventList events={visible} hazards={hazards} courses={courseById} onOpen={(e) => setEditing(e)} onToggle={toggleDone} />}
             </div>
             <aside className="stack">
-              <Hazards hazards={hazards} events={visible} />
+              <Hazards
+                hazards={hazards}
+                events={visible}
+                courses={courseById}
+                onMarkDone={(ids) => {
+                  const set = new Set(ids);
+                  setEvents((es) => es.map((e) => (set.has(e.id) ? { ...e, done: true } : e)));
+                  setToast(`${ids.length} past items checked off`);
+                }}
+              />
               {server.sync && (
                 <CloudSync
                   state={syncState}
@@ -400,6 +417,7 @@ export default function App() {
         />
       )}
       {toast && <div className="toast" role="status">{toast}</div>}
+      {touring && !empty && <Tour onView={(v) => setView(v)} onClose={() => setTouring(false)} />}
       {focus && (
         <MastMode
           session={focus.session}

@@ -89,3 +89,15 @@ export function findHazards(events: SyllabusEvent[]): Hazard[] {
 
   return hazards.sort((a, b) => a.date.localeCompare(b.date));
 }
+
+/** The Cyclops: the single biggest exam still ahead (by weight, then the latest one). */
+export function findCyclops(events: SyllabusEvent[], today: string): SyllabusEvent | undefined {
+  return events
+    .filter((e) => e.kind === "exam" && e.date >= today && !e.done)
+    .sort((a, b) => (b.weight ?? 0) - (a.weight ?? 0) || b.date.localeCompare(a.date))[0];
+}
+
+/** The Lotus-eaters: graded work whose date has passed but was never checked off. */
+export function findLotus(events: SyllabusEvent[], today: string): SyllabusEvent[] {
+  return events.filter((e) => GRADED.includes(e.kind) && e.date < today && !e.done);
+}

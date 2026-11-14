@@ -3,7 +3,7 @@
 import { useLayoutEffect, useMemo, useRef, useState } from "react";
 import type { Course, EventKind, SyllabusEvent } from "@/lib/types";
 import { KIND_LABEL } from "@/lib/types";
-import type { Hazard } from "@/lib/conflicts";
+import { findCyclops, type Hazard } from "@/lib/conflicts";
 import { addDays, daysBetween, prettyDate, prettyTime, weekStart, ymd } from "@/lib/dates";
 
 interface Props {
@@ -140,6 +140,7 @@ export default function VoyageMap({ events, hazards, courses, now, onOpen, onTog
   const islandR = (w: Week) => (w.items.some((e) => LOAD[e.kind]) ? 13 + Math.min(w.load, 12) * 2.1 : 12);
   const startR = Math.max(12, islandR(weeks[0]));
   const endR = Math.max(12, islandR(weeks[weeks.length - 1]));
+  const cyclops = findCyclops(events, today);
   const daysLeft = Math.max(0, daysBetween(today, addDays(weeks[weeks.length - 1].start, 6)));
   const passed = weeks.filter((w) => addDays(w.start, 6) < today).length;
   const examsLeft = events.filter((e) => e.kind === "exam" && e.date >= today && !e.done).length;
@@ -232,6 +233,12 @@ export default function VoyageMap({ events, hazards, courses, now, onOpen, onTog
               {r > 0 ? (
                 <>
                   <path className="land" d={blob(w.x, w.y, r, w.index)} fill="var(--land)" stroke="var(--land-edge)" strokeWidth="1.5" />
+                  {cyclops && w.items.some((e) => e.id === cyclops.id) && (
+                    <g aria-label="The Cyclops: your biggest exam">
+                      <ellipse cx={w.x + r * 0.55} cy={w.y + r * 0.2} rx={6} ry={4.2} fill="#fff" stroke="var(--ink)" strokeWidth="1" />
+                      <circle cx={w.x + r * 0.55} cy={w.y + r * 0.2} r={2.2} fill="var(--danger)" />
+                    </g>
+                  )}
                   {w.hasExam && (
                     <path d={`M${w.x - r * 0.45},${w.y + r * 0.15} L${w.x - r * 0.1},${w.y - r * 0.55} L${w.x + 0.05 * r},${w.y - r * 0.25} L${w.x + r * 0.22},${w.y - r * 0.5} L${w.x + r * 0.5},${w.y + r * 0.15} Z`} fill="var(--land-edge)" opacity="0.75" />
                   )}
@@ -262,8 +269,10 @@ export default function VoyageMap({ events, hazards, courses, now, onOpen, onTog
               </text>
               {w.hazard ? (
                 <text x={w.x} y={w.y - Math.max(r, 10) - 18} textAnchor="middle" fontSize="12.5" fontWeight="600" fill="var(--danger)">
-                  {w.hazard.epithet}
+                  {cyclops && w.items.some((e) => e.id === cyclops.id) ? `Cyclops · ${w.hazard.epithet}` : w.hazard.epithet}
                 </text>
+              ) : cyclops && w.items.some((e) => e.id === cyclops.id) ? (
+                <text x={w.x} y={w.y - Math.max(r, 10) - 18} textAnchor="middle" fontSize="12.5" fontWeight="600" fill="var(--danger)">The Cyclops</text>
               ) : w.holiday && r === 0 ? (
                 <text x={w.x} y={w.y - 18} textAnchor="middle" fontSize="12" fill="var(--ok)">Safe harbor</text>
               ) : null}
@@ -297,6 +306,7 @@ export default function VoyageMap({ events, hazards, courses, now, onOpen, onTog
         <span>Peak = exam week</span>
         <span style={{ color: "var(--danger)" }}>Scylla &amp; Charybdis = two big things on one day</span>
         <span style={{ color: "var(--danger)" }}>Storm = 3+ items in 3 days</span>
+        <span style={{ color: "var(--danger)" }}>Cyclops (eye) = your biggest exam ahead</span>
       </div>
 
       {selWeek && (
