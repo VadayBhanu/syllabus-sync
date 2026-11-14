@@ -78,16 +78,16 @@ export default function Blaze({ courses, events, sessions, online }: Props) {
     <>
       {!open && (
         <button className="blaze-fab" onClick={() => setOpen(true)} aria-label="Ask Blaze, your study assistant">
-          <Flame /> Ask Blaze
+          <Horse /> Ask Blaze
         </button>
       )}
       {open && (
         <aside className="blaze" role="dialog" aria-label="Blaze study assistant">
           <header className="blaze-head">
-            <Flame />
+            <Horse />
             <div className="grow">
               <b>Blaze</b>
-              <div className="tiny muted">{online ? "Answers from your syllabi, powered by Gemini" : "Offline mode: deadlines and syllabus search"}</div>
+              <div className="tiny muted">{online ? "The wooden horse with your answers inside · Gemini" : "Offline mode: deadlines and syllabus search"}</div>
             </div>
             {msgs.length > 0 && <button className="btn ghost small" onClick={() => setMsgs([])}>New chat</button>}
             <button className="btn ghost small" onClick={() => setOpen(false)} aria-label="Close Blaze">×</button>
@@ -97,14 +97,17 @@ export default function Blaze({ courses, events, sessions, online }: Props) {
             {msgs.length === 0 && (
               <div className="small">
                 <p style={{ marginTop: 0 }}>
-                  Hey, I&apos;m Blaze. Ask me anything about your {courses.length ? `${courses.length} course${courses.length > 1 ? "s" : ""}` : "courses"}: grading, policies,
-                  office hours, what&apos;s due. I only answer from your syllabi and show you the line I got it from.
+                  I&apos;m Blaze, the wooden horse. The Greeks hid soldiers inside me; you&apos;ve hidden answers inside your{" "}
+                  {courses.length ? `${courses.length} syllab${courses.length > 1 ? "i" : "us"}` : "syllabi"}. Ask about grading, policies, office hours or what&apos;s due, and I&apos;ll
+                  open the hatch and show you the exact line each answer came from.
                 </p>
                 {!courses.length && <p className="muted">Upload a syllabus first so I have something to read.</p>}
               </div>
             )}
             {msgs.map((m, i) => (
-              <div key={i} className={`bubble from-${m.role}`}>
+              <div key={i} className={`msg from-${m.role}`}>
+                {m.role === "blaze" && <span className="avatar"><Horse size={22} /></span>}
+              <div className={`bubble from-${m.role}`}>
                 <div style={{ whiteSpace: "pre-wrap" }}>{m.text}</div>
                 {m.citations && m.citations.length > 0 && (
                   <div className="cites">
@@ -117,8 +120,9 @@ export default function Blaze({ courses, events, sessions, online }: Props) {
                   </div>
                 )}
               </div>
+              </div>
             ))}
-            {busy && <div className="bubble from-blaze muted">Blaze is reading your syllabi…</div>}
+            {busy && <div className="bubble from-blaze muted">Opening the hatch…</div>}
           </div>
 
           <div className="blaze-foot">
@@ -159,11 +163,29 @@ export default function Blaze({ courses, events, sessions, online }: Props) {
   );
 }
 
-function Flame() {
+/** Blaze is a wooden horse on wheels, with a little hatch where the answers hide. Original artwork. */
+export function Horse({ size = 26 }: { size?: number }) {
   return (
-    <svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true">
-      <path d="M12 2c1 4 5 5.5 5 11a5 5 0 0 1-10 0c0-2.5 1.2-4 2.5-5 .2 2 1 3 2 3.5C11 9 11 5 12 2z" fill="#e8743b" />
-      <path d="M12 12c.6 1.8 2.5 2.4 2.5 4.6a2.5 2.5 0 0 1-5 0c0-1.3.7-2.1 1.4-2.6.2.8.6 1.2 1.1 1.4-.2-1.1-.3-2.2 0-3.4z" fill="#f6c453" />
+    <svg width={size} height={size} viewBox="0 0 32 32" aria-hidden="true">
+      <path d="M7 14 Q2.5 15.5 3.5 21" fill="none" stroke="#7a4b22" strokeWidth="1.6" strokeLinecap="round" />
+      <rect x="3" y="25" width="26" height="2.6" rx="1" fill="#7a4b22" />
+      <circle cx="8" cy="28.6" r="2.1" fill="#4a2c12" />
+      <circle cx="24" cy="28.6" r="2.1" fill="#4a2c12" />
+      <circle cx="8" cy="28.6" r="0.7" fill="#c8894a" />
+      <circle cx="24" cy="28.6" r="0.7" fill="#c8894a" />
+      <rect x="8" y="18" width="2.6" height="7.2" fill="#a8703a" />
+      <rect x="12.4" y="18" width="2.6" height="7.2" fill="#a8703a" />
+      <rect x="18.6" y="18" width="2.6" height="7.2" fill="#a8703a" />
+      <rect x="22.6" y="18" width="2.6" height="7.2" fill="#a8703a" />
+      <path d="M21 13.5 L24.6 4.6 L28 5.8 L25.8 14 Z" fill="#c8894a" />
+      <rect x="6" y="11.5" width="20.5" height="8.5" rx="3" fill="#c8894a" />
+      <path d="M8 14 H24 M8 17.3 H24" stroke="#a8703a" strokeWidth="0.6" />
+      <rect x="13" y="13.2" width="5.4" height="4.8" rx="0.6" fill="#f6c453" stroke="#4a2c12" strokeWidth="0.9" />
+      <path d="M15.7 13.2 V18" stroke="#4a2c12" strokeWidth="0.6" />
+      <path d="M24 3.8 L31 5.8 L30.4 9.2 L25.6 8.4 Z" fill="#c8894a" />
+      <path d="M25 4.2 L25.8 1.2 L27.4 4.6 Z" fill="#a8703a" />
+      <path d="M24.4 5 L21.6 12.6" stroke="#7a4b22" strokeWidth="1.4" strokeLinecap="round" />
+      <circle cx="27.6" cy="6.2" r="0.7" fill="#2a1808" />
     </svg>
   );
 }
