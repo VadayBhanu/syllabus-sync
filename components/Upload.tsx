@@ -160,11 +160,11 @@ export default function Upload({ onText, onCalendar, onSamples, compact, ai, use
         >
           <input ref={input} type="file" accept=".pdf,.txt,.md,.ics,.html,application/pdf,text/plain,text/calendar" multiple hidden onChange={(e) => handleFiles(e.target.files)} />
           {busy ? <b>{busy}</b> : compact ? (
-            <span><b>Drop a PDF here</b><br /><span className="muted small">or click to browse · .ics works too</span></span>
+            <span><b>Add more syllabi</b><br /><span className="muted small">Drop one or several PDFs, or click to pick them</span></span>
           ) : (
             <>
-              <h2>Drop your syllabus PDFs</h2>
-              <span className="muted">or click to browse. Several at once is fine, and calendar (.ics) files work too.</span>
+              <h2>Drop all your syllabi at once</h2>
+              <span className="muted">Select or drag in every course's PDF together (or add them one by one). Each becomes its own colour-coded course. Calendar (.ics) files work too.</span>
             </>
           )}
         </div>
@@ -227,7 +227,8 @@ export default function Upload({ onText, onCalendar, onSamples, compact, ai, use
       {error && <div className="notice error" role="alert">{error}</div>}
       <div className="row">
         {!compact && <button className="btn small primary" onClick={onSamples}>Try two sample UTA syllabi</button>}
-        {!compact && <a className="btn small" href={`${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}/samples/hist1311-syllabus.pdf`} download>Get a sample PDF</a>}
+        {!compact && <a className="btn small" href={`${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}/samples/hist1311-syllabus.pdf`} download>Sample PDF 1</a>}
+        {!compact && <a className="btn small" href={`${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}/samples/phys1443-syllabus.pdf`} download>Sample PDF 2</a>}
         {ai && setUseAi && (
           <label className="row small" style={{ gap: 6 }} title="Gemini reads messy layouts; every date it finds is checked against the syllabus text">
             <input type="checkbox" checked={!!useAi} onChange={(e) => setUseAi(e.target.checked)} /> Read with Gemini

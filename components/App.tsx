@@ -130,9 +130,15 @@ export default function App() {
   const hazards = useMemo(() => findHazards(visible), [visible]);
   const courseById = useMemo(() => new Map(courses.map((c) => [c.id, c])), [courses]);
 
+  // Several files can import back to back (multi-select, drag in a stack), faster than React
+  // re-renders, so imports read and update this ref instead of a possibly stale `courses`.
+  const coursesRef = useRef(courses);
+  coursesRef.current = courses;
+
   const importText = useCallback(
     async (text: string, fileName: string, asCode?: string) => {
       const result = await extract(text);
+      const courses = coursesRef.current;
       const code = asCode ?? result.courseCode ?? fileName.replace(/\.[a-z]+$/i, "").slice(0, 24) ?? "Course";
       // re-importing the same course replaces it instead of doubling every deadline
       const existing = courses.find((c) => c.code === code);
@@ -148,6 +154,7 @@ export default function App() {
         text: text.slice(0, 40_000),
       };
       const newEvents: SyllabusEvent[] = result.events.map((e) => ({ ...e, id: uid(), courseId }));
+      coursesRef.current = existing ? courses.map((c) => (c.id === courseId ? course : c)) : [...courses, course];
       setCourses((cs) => (existing ? cs.map((c) => (c.id === courseId ? course : c)) : [...cs, course]));
       setEvents((es) => [...es.filter((e) => e.courseId !== courseId || e.manual), ...newEvents]);
       setNotes((ns) => [
@@ -162,14 +169,14 @@ export default function App() {
             : `${code}: no deadlines found. You can add them by hand.`,
       );
     },
-    [courses, extract],
+    [extract],
   );
 
   // Calendar feeds (Canvas etc.) arrive already structured: one course per bracketed course code.
   const importCalendar = useCallback(
     (groups: IcsCourseGroup[], label: string) => {
-      let cs = [...courses];
-      let es = [...events];
+      let cs = [...coursesRef.current];
+      let es = [...latest.current.events];
       let total = 0;
       for (const g of groups) {
         const existing = cs.find((c) => c.code === g.code);
@@ -183,11 +190,13 @@ export default function App() {
         es = [...es, ...fresh.map((e) => ({ ...e, id: uid(), courseId: id }))];
         total += fresh.length;
       }
+      coursesRef.current = cs;
+      latest.current = { ...latest.current, courses: cs, events: es };
       setCourses(cs);
       setEvents(es);
       setToast(`${label}: ${total} new item${total === 1 ? "" : "s"} from ${groups.length} course${groups.length === 1 ? "" : "s"}`);
     },
-    [courses, events],
+    [],
   );
 
   const loadSamples = () => {

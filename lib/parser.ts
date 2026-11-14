@@ -194,12 +194,13 @@ function cleanTitle(s: string): string {
     .replace(/\s{2,}/g, " ")
     .replace(/^[\s:;,.\-–—)\]]+/, "")
     .replace(/[\s:;,\-–—(\[]+$/, "")
-    .replace(/\b(due|on|by|at)\s*$/i, "")
+    .replace(/(\s+\b(due|on|by|at|is|are|will be|held|closes|opens|in class on|takes place)\b)+\s*$/i, "")
+    .replace(/^(the|your|our)\s+/i, "")
     .trim();
   // "due" alone, or just punctuation, is not a title
   if (/^(due|deadline|on|by|at|and|&)?$/i.test(t)) return "";
   if (t.length > 90) t = t.slice(0, 87).trimEnd() + "…";
-  return t;
+  return t ? t[0].toUpperCase() + t.slice(1) : t;
 }
 
 function titleCase(kind: EventKind) {
@@ -314,7 +315,12 @@ export function normalizeText(raw: string): string {
 
 export function parseSyllabus(raw: string, today = new Date()): ParseResult {
   const text = normalizeText(raw);
-  const lines = text.split("\n").map((l) => l.replace(/[ \t]+/g, " ").trim());
+  // Prose syllabi put several deadlines in one paragraph, so split lines into sentences too
+  // (but not after abbreviations like "Dr." or "Sept.").
+  const lines = text
+    .split("\n")
+    .flatMap((l) => l.split(/(?<!\b(?:Dr|Mr|Ms|Mrs|Prof|Ch|St|No|vs|etc|Jan|Feb|Mar|Apr|Jun|Jul|Aug|Sep|Sept|Oct|Nov|Dec|[A-Z]))\.\s+(?=[A-Z])/))
+    .map((l) => l.replace(/[ \t]+/g, " ").trim());
   const term = detectTerm(text, today);
   const course = detectCourse(text);
 
@@ -345,7 +351,9 @@ export function parseSyllabus(raw: string, today = new Date()): ParseResult {
       // a bare row number in front of the date ("13  Nov 17  Group presentation") is a table index
       if (k === 0 && /^\s*(?:wk\.?\s*|week\s*)?\d{1,2}\s*$/i.test(before)) before = "";
       const after = line.slice(d.end, segEnd);
-      let context = dates.length === 1 ? before + " " + line.slice(d.end) : "";
+      // In prose ("Test 2 will be held Wednesday, Nov 18 at 7 PM in SH 100") the label comes
+      // before the date and what follows is detail; in tables the label often follows.
+      let context = dates.length === 1 ? (classify(before) && cleanTitle(before).split(" ").length >= 2 ? before : before + " " + line.slice(d.end)) : "";
       if (dates.length > 1) {
         // "Exam 1: Sep 25, Exam 2: Oct 30" -> label usually precedes the date
         context = classify(before) ? before : classify(after) ? after : before + " " + after;

@@ -111,3 +111,19 @@ describe("sample syllabi", () => {
     expect(r.events.find((e) => e.title.includes("Problem Set 5"))?.date).toBe("2026-11-18");
   });
 });
+
+describe("prose syllabi", () => {
+  it("splits sentences and keeps clean titles", () => {
+    const text = `PHYS 1443 General Technical Physics I, Fall 2026. Dr. A. Smith.
+Lab 1 report is due September 11th. Test 1 is on Friday, October 2 in class. Test 2 will be held Wednesday, November 18 at 7:00 PM in SH 100. Online homework set 9 closes 11/20 at 11:59 PM. No class on November 27 (Thanksgiving). The final exam is Monday, December 7, 8:00 AM.`;
+    const r = parseSyllabus(text, TODAY);
+    expect(r.events.map((e) => [e.title, e.date, e.time ?? ""])).toEqual([
+      ["Lab 1 report", "2026-09-11", ""],
+      ["Test 1", "2026-10-02", ""],
+      ["Test 2", "2026-11-18", "19:00"],
+      ["Online homework set 9", "2026-11-20", "23:59"],
+      ["No class", "2026-11-27", ""],
+      ["Final exam", "2026-12-07", "08:00"],
+    ]);
+  });
+});

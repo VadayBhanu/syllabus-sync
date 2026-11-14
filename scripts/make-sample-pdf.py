@@ -41,3 +41,21 @@ t.setStyle(TableStyle([
 story.append(t)
 doc.build(story)
 print("wrote", out)
+
+# A second, prose-style syllabus so demos can upload several PDFs at once
+out2 = "public/samples/phys1443-syllabus.pdf"
+doc2 = SimpleDocTemplate(out2, pagesize=letter, title="PHYS 1443 Syllabus")
+story2 = [
+    Paragraph("PHYS 1443 - General Technical Physics I", ss["Title"]),
+    Paragraph("UT Arlington &middot; Fall 2026 &middot; MWF 9:00-9:50 AM, SH 101 &middot; Office hours: Thursday 2-4 PM, SH 312", ss["Normal"]),
+    Spacer(1, 12),
+    Paragraph("Grading", ss["Heading2"]),
+    Paragraph("Online homework 20%; Labs 15%; Test 1 20%; Test 2 20%; Final exam 25%.", ss["Normal"]),
+    Spacer(1, 12),
+    Paragraph("Key dates", ss["Heading2"]),
+    Paragraph("Lab 1 report is due September 11th. Test 1 is on Friday, October 2 in class. Lab 4 report due 10/23. "
+              "Test 2 will be held Wednesday, November 18 at 7:00 PM in SH 100. Online homework set 9 closes 11/20 at 11:59 PM. "
+              "No class on November 27 (Thanksgiving). The final exam is Monday, December 7, 8:00 AM.", ss["Normal"]),
+]
+doc2.build(story2)
+print("wrote", out2)
