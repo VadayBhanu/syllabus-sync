@@ -101,7 +101,7 @@ export function offlineAnswer(q: string, courses: Course[], events: SyllabusEven
     const s = addDays(weekStart(today), 7);
     return range(s, addDays(s, 6), "next week");
   }
-  if (/this week|week/.test(lower) && /due|do|need|have/.test(lower)) return range(today, addDays(weekStart(today), 6), "this week");
+  if (/this week|week/.test(lower) && /due|do|need|have/.test(lower)) return range(today, addDays(today, 6), "in the next 7 days");
 
   if (/next (exam|test|midterm|final)|exam/.test(lower) && /when|next|date/.test(lower)) {
     const exams = graded.filter((e) => e.kind === "exam" && e.date >= today);

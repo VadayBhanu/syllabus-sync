@@ -90,6 +90,11 @@ export default function Upload({ onText, onSamples, compact, ai, useAi, setUseAi
       <div className="row">
         <button className="btn small" onClick={() => setPasting((p) => !p)}>{pasting ? "Hide paste box" : "Paste text instead"}</button>
         {!compact && <button className="btn small primary" onClick={onSamples}>Try two sample UTA syllabi</button>}
+        {!compact && (
+          <a className="btn small" href="/samples/hist1311-syllabus.pdf" download>
+            Get a sample PDF
+          </a>
+        )}
         {ai && setUseAi && (
           <label className="row small" style={{ gap: 6 }} title="Gemini reads messy layouts; every date it finds is checked against the syllabus text">
             <input type="checkbox" checked={!!useAi} onChange={(e) => setUseAi(e.target.checked)} /> Read with Gemini

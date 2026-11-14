@@ -286,7 +286,7 @@ export function inferYear(month: number, day: number, anchor: Date): number {
 
 export function detectCourse(text: string): { code?: string; name?: string } {
   const head = text.slice(0, 1500);
-  const m = /\b([A-Z]{2,5})[\s-]?(\d{4}|\d{3}[A-Z]?)\b(?:[\s\-–:|.]+([A-Z][A-Za-z&,'/ ]{3,60}))?/.exec(head);
+  const m = /\b([A-Z]{2,5})[\s-]?(\d{4}|\d{3}[A-Z]?)\b(?:[\s\-–:|.]+([A-Z][A-Za-z0-9&,'/ ]{3,60}))?/.exec(head);
   if (!m) return {};
   const code = `${m[1]} ${m[2]}`;
   let name: string | undefined = m[3]?.trim();
