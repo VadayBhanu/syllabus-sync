@@ -224,7 +224,7 @@ export default function KnowledgeMap({ courses, events, today, failedHint, onPra
                       <div key={id} className="small">
                         <b>{i + 1}. {concept(id).label}</b> <span className="muted tiny">{fmtMinutes(concept(id).practice.minutes)}</span>
                         <div className="tiny">{concept(id).practice.task}</div>
-                        <div className="row" style={{ gap: 4, marginTop: 2 }}>{concept(id).practice.links.map((r) => <ResLink key={r.url} r={r} />)}</div>
+                        <div className="res">{concept(id).practice.links.map((r) => <ResLink key={r.url} r={r} />)}</div>
                       </div>
                     ))}
                   </div>
