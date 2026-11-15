@@ -3,6 +3,7 @@
 import { useLayoutEffect, useMemo, useRef, useState } from "react";
 import type { Course, EventKind, SyllabusEvent } from "@/lib/types";
 import { KIND_LABEL } from "@/lib/types";
+import { ResLink } from "./LearnPath";
 import { findCyclops, type Hazard } from "@/lib/conflicts";
 import { addDays, daysBetween, prettyDate, prettyTime, weekStart, ymd } from "@/lib/dates";
 
@@ -18,6 +19,8 @@ interface Props {
   /** shift a stop by n days */
   onMove?: (id: string, days: number) => void;
   mode?: "academic" | "learning" | "project";
+  /** attach study sources to a stop */
+  onSources?: (id: string) => void;
 }
 
 // How much each kind of item weighs on a week. Drives island size and how rough the sea gets.
@@ -44,7 +47,7 @@ interface Week {
   y: number;
 }
 
-export default function VoyageMap({ events, hazards, courses, now, onOpen, onToggle, onAdd, onMove, mode = "academic" }: Props) {
+export default function VoyageMap({ events, hazards, courses, now, onOpen, onToggle, onAdd, onMove, mode = "academic", onSources }: Props) {
   const today = ymd(now);
   const [narrow, setNarrow] = useState(false);
   useLayoutEffect(() => {
@@ -335,7 +338,7 @@ export default function VoyageMap({ events, hazards, courses, now, onOpen, onTog
             selWeek.items.map((e) => {
               const c = courses.get(e.courseId);
               return (
-                <div key={e.id} className={`evt ${e.done ? "done" : ""}`}>
+                <div key={e.id} className={`evt ${e.done ? "done" : ""}`} style={{ gridTemplateColumns: "auto minmax(0, 1fr) auto" }}>
                   <input type="checkbox" checked={!!e.done} onChange={() => onToggle(e.id)} aria-label={`Mark ${e.title} done`} style={{ marginTop: 4 }} />
                   <div>
                     <div className="ttl">{e.title}</div>
@@ -348,6 +351,15 @@ export default function VoyageMap({ events, hazards, courses, now, onOpen, onTog
                       {e.weight ? <span>{e.weight}%</span> : null}
                       {e.confidence !== "high" && <span className="badge low">check</span>}
                     </div>
+                    {e.links?.length ? (
+                      <div className="res">
+                        <span className="tiny muted" style={{ alignSelf: "center" }}>Study it at:</span>
+                        {e.links.slice(0, 6).map((r) => <ResLink key={r.url} r={r} />)}
+                      </div>
+                    ) : null}
+                    {onSources && e.kind !== "holiday" && e.kind !== "admin" && !e.links?.some((r) => r.kind && r.kind !== "search") && (
+                      <button className="res-quiz" style={{ marginTop: 4 }} onClick={() => onSources(e.id)}>📚 Find sources</button>
+                    )}
                   </div>
                   <div className="row" style={{ gap: 4, flexWrap: "nowrap" }}>
                     {onMove && <button className="btn small mv" onClick={() => onMove(e.id, -7)} title="Move a week earlier" aria-label={`Move ${e.title} a week earlier`}>‹ wk</button>}

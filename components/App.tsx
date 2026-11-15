@@ -32,6 +32,7 @@ import RoadmapPreview from "./RoadmapPreview";
 import { modeOf, reschedule, trackToCourse, type Mode } from "@/lib/learn";
 import type { Track } from "@/lib/roadmaps";
 import { applyAction } from "@/lib/actions";
+import { mergeLinks, sourcesFor } from "@/lib/catalog";
 import { buildPlan, type StudySession } from "@/lib/plan";
 import { addDays, ymd } from "@/lib/dates";
 
@@ -333,6 +334,16 @@ export default function App() {
     setConfirmRemove(null);
   };
 
+  const findSources = (id: string) => {
+    const ev = events.find((e) => e.id === id);
+    if (!ev) return;
+    const course = courses.find((c) => c.id === ev.courseId);
+    const links = mergeLinks(sourcesFor(ev.title, course?.name ?? ""), ev.links ?? [], 8);
+    setEvents((es) => es.map((e) => (e.id === id ? { ...e, links } : e)));
+    const direct = links.filter((r) => r.kind !== "search").length;
+    setToast(direct ? `${direct} direct source${direct > 1 ? "s" : ""} added to ${ev.title}` : `Added searches for ${ev.title}. Ask Blaze for a sharper search.`);
+  };
+
   const moveEvent = (id: string, days: number) =>
     setEvents((es) => es.map((e) => (e.id === id ? { ...e, date: addDays(e.date, days), endDate: e.endDate ? addDays(e.endDate, days) : undefined, confidence: "high", note: undefined } : e)));
 
@@ -493,6 +504,7 @@ export default function App() {
                   onToggle={toggleDone}
                   onAdd={(d) => { setNewDate(d); setEditing("new"); }}
                   onMove={moveEvent}
+                  onSources={findSources}
                 />
               )}
               {!draft && shown === "plan" && (
@@ -511,7 +523,7 @@ export default function App() {
                 />
               )}
               {!draft && shown === "learn" && (
-                <LearnPath courses={modeCourses.filter((c) => !hidden.has(c.id))} events={modeEvents} today={today} onToggle={toggleDone} onOpen={(e) => setEditing(e)} onReschedule={replanLearning} />
+                <LearnPath courses={modeCourses.filter((c) => !hidden.has(c.id))} events={modeEvents} today={today} onToggle={toggleDone} onOpen={(e) => setEditing(e)} onReschedule={replanLearning} onSources={findSources} />
               )}
               {!draft && shown === "oracle" && <Oracle courses={courses} />}
               {!draft && shown === "calendar" && <CalendarView events={visible} hazards={hazards} courses={courseById} now={now} onOpen={(e) => setEditing(e)} />}

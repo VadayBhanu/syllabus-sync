@@ -14,6 +14,7 @@ interface Props {
   onToggle: (id: string) => void;
   onOpen: (e: SyllabusEvent) => void;
   onReschedule: (courseId: string, hoursPerWeek: number) => void;
+  onSources?: (id: string) => void;
 }
 
 type Link = NonNullable<SyllabusEvent["links"]>[number];
@@ -33,7 +34,7 @@ export function ResLink({ r }: { r: Link }) {
 const quiz = (title: string) =>
   window.dispatchEvent(new CustomEvent("blaze:ask", { detail: `Quiz me on "${title}" with one question at a time. Don't give me the answers until I try.` }));
 
-export default function LearnPath({ courses, events, today, onToggle, onOpen, onReschedule }: Props) {
+export default function LearnPath({ courses, events, today, onToggle, onOpen, onReschedule, onSources }: Props) {
   const learning = courses.filter((c) => c.learning);
   const [rulesOpen, setRulesOpen] = useState(true);
   if (!learning.length) return <section className="panel muted">No learning roadmaps yet. Pick one under “Learn a skill”.</section>;
@@ -46,12 +47,12 @@ export default function LearnPath({ courses, events, today, onToggle, onOpen, on
         </ol>
         <div className="tiny muted">Ticking a topic opens a short explain-it-back question. With Gemini on, it reads your answer like a tutor and tells you what's missing.</div>
       </details>
-      {learning.map((c) => <Path key={c.id} course={c} events={events} today={today} onToggle={onToggle} onOpen={onOpen} onReschedule={onReschedule} />)}
+      {learning.map((c) => <Path key={c.id} course={c} events={events} today={today} onToggle={onToggle} onOpen={onOpen} onReschedule={onReschedule} onSources={onSources} />)}
     </div>
   );
 }
 
-function Path({ course, events, today, onToggle, onOpen, onReschedule }: { course: Course } & Omit<Props, "courses">) {
+function Path({ course, events, today, onToggle, onOpen, onReschedule, onSources }: { course: Course } & Omit<Props, "courses">) {
   const p = progress(course, events, today);
   const L = course.learning!;
   const [pace, setPace] = useState(L.hoursPerWeek);
@@ -119,12 +120,11 @@ function Path({ course, events, today, onToggle, onOpen, onReschedule }: { cours
                     <span className="tiny muted"> · {e.minutes ? fmtMinutes(e.minutes) : ""} · by {prettyDate(e.date, false)}</span>
                     {e.proof && <span className={`proof ${e.proof.verdict}`} title={e.proof.answer}>{e.proof.verdict === "pass" ? "✓ proved" : "self-checked"}</span>}
                     {e.goal && <div className="tiny muted">{e.goal}</div>}
-                    {e.links?.length ? (
-                      <div className="res">
-                        {e.links.map((r) => <ResLink key={r.url} r={r} />)}
-                        {e.kind !== "project" && !e.done && <button className="res-quiz" onClick={() => quiz(e.title)}>💬 Quiz me</button>}
-                      </div>
-                    ) : null}
+                    <div className="res">
+                      {(e.links ?? []).map((r) => <ResLink key={r.url} r={r} />)}
+                      {onSources && !e.links?.some((r) => r.kind && r.kind !== "search") && <button className="res-quiz" onClick={() => onSources(e.id)}>📚 Find sources</button>}
+                      {e.kind !== "project" && !e.done && e.check && <button className="res-quiz" onClick={() => quiz(e.title)}>💬 Quiz me</button>}
+                    </div>
                   </div>
                 </li>
               ))}

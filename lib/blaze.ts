@@ -18,6 +18,7 @@ export type BlazeActionType =
   | "add_deadline"
   | "update_deadline"
   | "remove_deadline"
+  | "attach_sources"
   | "mark_done"
   | "add_session"
   | "move_session"

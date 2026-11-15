@@ -26,11 +26,12 @@ describe("roadmaps", () => {
     expect(roadmapFor("pottery").url).toBe("https://roadmap.sh");
   });
 
-  it("builds an offline outline for any goal with search links only", () => {
+  it("builds an offline outline for any goal, with direct links where we know them", () => {
     const t = outlineFor("quantum computing");
     expect(t.code).toBe("QC");
     expect(t.stages.length).toBe(3);
-    expect(t.stages[0].topics[0].resources[0].url).toContain("youtube.com/results?search_query=");
+    expect(t.stages[0].topics[0].resources[0].url).toContain("quantum.cloud.ibm.com");
+    expect(outlineFor("pottery").stages[0].topics[0].resources[0].url).toContain("youtube.com/results?search_query=");
   });
 
   it("sanitises Gemini output and drops any links it invents", () => {
@@ -144,5 +145,35 @@ describe("modes, projects and editing the map", () => {
     expect(added.minutes).toBe(180);
     const r2 = applyAction(state, { type: "add_deadline", summary: "x", course: "AI", title: "Demo day", date: "2027-04-10", stage: "Showcase" }, (p) => id(p));
     expect(r2.state!.courses[0].learning?.stages).toContain("Showcase");
+  });
+});
+
+import { catalogFor, sourcesFor } from "@/lib/catalog";
+
+describe("direct study sources", () => {
+  it("matches topics to vetted direct links, and doesn't confuse neighbours", () => {
+    expect(catalogFor("Linear algebra")[0].url).toContain("3blue1brown.com/topics/linear-algebra");
+    expect(catalogFor("Superposition", "quantum computing")[0].url).toContain("quantum.cloud.ibm.com");
+    expect(catalogFor("Marketing Funnel Mapping")[0].url).toBe("https://academy.hubspot.com");
+    expect(catalogFor("How neural networks learn").some((r) => r.url.includes("professormesser"))).toBe(false);
+    expect(catalogFor("Vector databases").some((r) => r.url.includes("linear-algebra"))).toBe(false);
+    expect(catalogFor("Random forests").some((r) => r.url.includes("javascript"))).toBe(false);
+    expect(catalogFor("Pottery glazing")).toEqual([]);
+  });
+
+  it("falls back to labelled searches, never model-written URLs", () => {
+    const r = sourcesFor("Pottery glazing", "ceramics", "Glaze chemistry basics");
+    expect(r.every((x) => x.kind === "search" && x.label.startsWith("Search "))).toBe(true);
+    expect(r[0].url).toContain("Glaze%20chemistry%20basics");
+  });
+
+  it("Blaze's attach_sources adds catalogue links to a stop", () => {
+    const { course, events } = trackToCourse(outlineFor("marketing"), { start: "2026-11-16", hoursPerWeek: 5 }, "#000", id);
+    const ev = { ...events[0], title: "Competitor Market Analysis", links: [] };
+    const state = { courses: [course], events: [ev], sessions: [], plan: { dailyMinutes: 180, weekends: true } };
+    const r = applyAction(state, { type: "attach_sources", summary: "x", id: ev.id, title: "HubSpot competitor analysis" }, (p) => id(p));
+    const links = r.state!.events[0].links!;
+    expect(links[0].url).toBe("https://academy.hubspot.com");
+    expect(links.some((l) => l.url.includes("HubSpot%20competitor%20analysis"))).toBe(true);
   });
 });

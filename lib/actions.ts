@@ -6,6 +6,7 @@ import type { Course, EventKind, SyllabusEvent } from "./types";
 import type { StudySession } from "./plan";
 import { isValidDate } from "./dates";
 import { COURSE_COLORS } from "./storage";
+import { mergeLinks, sourcesFor } from "./catalog";
 
 export interface AppState {
   courses: Course[];
@@ -72,6 +73,14 @@ export function applyAction(s: AppState, a: BlazeAction, makeId: (p: string) => 
         note: undefined,
       };
       return { state: { ...s, events: s.events.map((e) => (e.id === ev.id ? next : e)) } };
+    }
+    case "attach_sources": {
+      // Blaze names the stop (and maybe a better search phrase); the links come from our own
+      // catalogue and trusted search pages, never from the model.
+      if (!ev) return { error: "That stop no longer exists." };
+      const course = s.courses.find((c) => c.id === ev.courseId);
+      const links = mergeLinks(sourcesFor(ev.title, course?.name ?? "", a.title), ev.links ?? [], 8);
+      return { state: { ...s, events: s.events.map((e) => (e.id === ev.id ? { ...e, links } : e)) } };
     }
     case "remove_deadline":
       if (!ev) return { error: "That deadline no longer exists." };

@@ -64,6 +64,8 @@ export interface Track {
   stages: Stage[];
 }
 
+import { catalogFor, mergeLinks } from "./catalog";
+
 const c = (label: string, url: string, cost: Cost = "Free"): Resource => ({ label, url, kind: "course", cost });
 const v = (label: string, url: string): Resource => ({ label, url, kind: "video", cost: "Free" });
 const d = (label: string, url: string): Resource => ({ label, url, kind: "docs", cost: "Free" });
@@ -458,9 +460,9 @@ export function studyLinks(raw: unknown): Resource[] {
     const make = STUDY_PLATFORMS[platform];
     if (!make || !search) continue;
     out.push({
-      label: `${platform}: "${search}"`,
+      label: `Search ${platform}: "${search}"`,
       url: make(encodeURIComponent(search)),
-      kind: platform === "YouTube" ? "video" : "search",
+      kind: "search",
       cost: platform === "Udemy" ? "Paid" : platform === "Coursera" || platform === "edX" ? "Free to audit" : "Free",
     });
   }
@@ -475,8 +477,8 @@ export function certSearch(name: string): Resource {
 export function searchLinks(goal: string, topic: string): Resource[] {
   const q = encodeURIComponent(`${topic} ${goal}`.trim());
   return [
-    { label: "YouTube: find a course", url: `https://www.youtube.com/results?search_query=${q}+full+course`, kind: "search", cost: "Free" },
-    { label: "freeCodeCamp articles", url: `https://www.freecodecamp.org/news/search/?query=${q}`, kind: "search", cost: "Free" },
+    { label: "Search YouTube for a course", url: `https://www.youtube.com/results?search_query=${q}+full+course`, kind: "search", cost: "Free" },
+    { label: "Search freeCodeCamp", url: `https://www.freecodecamp.org/news/search/?query=${q}`, kind: "search", cost: "Free" },
   ];
 }
 
@@ -488,7 +490,7 @@ export function outlineFor(goal: string): Track {
     minutes,
     goal: goalLine,
     check: `Explain the most important idea from "${title}" to a classmate, in your own words, with one concrete example.`,
-    resources: searchLinks(clean, title),
+    resources: mergeLinks(catalogFor(title, clean), searchLinks(clean, title)),
   });
   return {
     id: "custom",
@@ -541,7 +543,7 @@ export function sanitizeTrack(raw: unknown, goal: string, kind: "learning" | "pr
           check: kind === "project" ? "" : String(x.check ?? "").slice(0, 300) || `Explain "${String(x.title).slice(0, 90)}" in your own words with one example.`,
           resources: (() => {
             const study = studyLinks(x.studyAt);
-            return study.length ? study : searchLinks(clean, String(x.title));
+            return mergeLinks(catalogFor(String(x.title), clean), study.length ? study.slice(0, 2) : searchLinks(clean, String(x.title)));
           })(),
         })),
       project: s?.project?.title ? { title: String(s.project.title).slice(0, 90), minutes: clamp(s.project.minutes, 300), goal: String(s.project.goal ?? "").slice(0, 160) } : undefined,
@@ -568,7 +570,7 @@ export function sanitizeTrack(raw: unknown, goal: string, kind: "learning" | "pr
 export function projectTemplate(name: string, goal: string): Track {
   const n = name.trim().slice(0, 60) || "My project";
   const g = goal.trim().slice(0, 160);
-  const t = (title: string, minutes: number, line: string): Topic => ({ title, minutes, goal: line, check: "", resources: searchLinks(g || n, title) });
+  const t = (title: string, minutes: number, line: string): Topic => ({ title, minutes, goal: line, check: "", resources: mergeLinks(catalogFor(title, g), searchLinks(g || n, title), 4) });
   return {
     id: "project",
     code: codeFor(n),
