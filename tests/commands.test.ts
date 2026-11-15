@@ -52,3 +52,12 @@ describe("recovery command", () => {
     expect(fromUiString("recover:4")).toEqual({ type: "recover", days: 4 });
   });
 });
+
+describe("knowledge gap command", () => {
+  it("routes a failed quiz to the star chart", () => {
+    expect(parseCommand("I failed my concurrency quiz")).toEqual({ type: "gaps", score: undefined });
+    expect(parseCommand("i bombed quiz 4, got 48 percent")).toMatchObject({ type: "gaps" });
+    expect(parseCommand("open the star chart")).toMatchObject({ type: "gaps" });
+    expect(parseCommand("What should I learn next?")).toMatchObject({ type: "gaps" });
+  });
+});

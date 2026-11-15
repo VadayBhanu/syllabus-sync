@@ -100,8 +100,9 @@ Schedule (subject to change)
 Aug. 27th  - Intro, processes
 Sept 15th  - Assignment 1 (shell) due
 Oct 8th    - Midterm exam (20%)
+Nov. 12th  - Quiz 4 (concurrency: races, locks, condition variables)
 Nov. 13th  - Assignment 3 (threads) released
-Nov. 19th  - Quiz 4
+Nov. 19th  - Quiz 5
 Nov. 21st  - Assignment 3 (threads) due, 11:59 PM (10%)
 Dec. 3rd   - Assignment 4 (memory allocator) due (10%)
 Dec. 10th  - Final exam, 8:00 AM (30%)

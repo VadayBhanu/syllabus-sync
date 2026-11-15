@@ -2,7 +2,7 @@
 // "plan my day". Parsed locally so they're instant, work offline and cost no AI quota.
 // Typos are forgiven ("drak mode", "opne the oracel").
 
-export type View = "voyage" | "learn" | "plan" | "oracle" | "calendar" | "list";
+export type View = "voyage" | "learn" | "plan" | "oracle" | "knowledge" | "calendar" | "list";
 export type UiCommand =
   | { type: "theme"; value: "dark" | "light" | "system" }
   | { type: "mode"; value: "academic" | "learning" | "project" }
@@ -12,6 +12,7 @@ export type UiCommand =
   | { type: "export" }
   | { type: "plan_today" }
   | { type: "recover"; days: number }
+  | { type: "gaps"; score?: number }
   | { type: "course"; value: "hide" | "show"; course: string };
 
 const VOCAB = [
@@ -19,6 +20,7 @@ const VOCAB = [
   "voyage", "map", "work", "plan", "schedule", "today", "todays", "oracle", "calendar", "list", "deadlines",
   "learning", "path", "project", "academic", "syllabus", "study", "self", "mast", "focus", "timer", "pomodoro",
   "tour", "demo", "take", "start", "stop", "export", "download", "prepare", "build", "make", "university", "roadmap", "grade", "calculator",
+  "failed", "quiz", "knowledge", "chart", "star", "gaps", "struggling",
   "sick", "lost", "lose", "missed", "semester", "save", "days", "three", "recover", "recovery",
 ];
 
@@ -61,6 +63,7 @@ export function normalize(text: string): string {
 const VIEWS: [RegExp, View][] = [
   [/\b(voyage|map)\b/, "voyage"],
   [/\b(oracle|grade calculator|grades?)\b/, "oracle"],
+  [/\b(star chart|knowledge|skills? map|gaps)\b/, "knowledge"],
   [/\bcalendar\b/, "calendar"],
   [/\b(learning path|roadmap|project plan|path)\b/, "learn"],
   [/\b(work plan|plan|schedule|study plan|sessions)\b/, "plan"],
@@ -79,6 +82,12 @@ export function parseCommand(text: string, courseCodes: string[] = []): UiComman
   if (/\b(system|auto|default)\b.*\b(theme|mode)\b/.test(t)) return { type: "theme", value: "system" };
 
   if (/\b(prepare|plan|make|build|set up|organi[sz]e|show)\b.*\b(today|todays|my day)\b|\bplan my day\b|\btodays (work|schedule|plan)\b/.test(t)) return { type: "plan_today" };
+
+  // "I failed my concurrency quiz": find the real gap before assigning practice
+  if (/\b(failed|fail|flunked|bombed|struggling|struggled|bad)\b.*\b(quiz|test|exam|concurrency|threads?|locks?)\b|\b(knowledge map|star chart|my gaps|what (should|do) i learn next)\b/.test(t)) {
+    const sc = t.match(/\b(\d{1,3})\s*percent\b/) ?? t.match(/\b(?:got|scored|score)\s+(?:a\s+|an\s+)?(\d{1,3})\b/);
+    return { type: "gaps", score: sc ? Math.min(100, Number(sc[1])) : undefined };
+  }
 
   // "I just got sick and lost three days. Save my semester."
   const sick = /\b(sick|ill|flu|covid|hospital|lost|lose|missed)\b.*\bdays?\b|\bsave my (semester|week|grades?)\b|\b(recovery|recover) plan\b/.test(t);
@@ -114,7 +123,7 @@ export function fromUiString(s: string): UiCommand | null {
   const [k, v = ""] = String(s).split(":");
   if (k === "theme" && ["dark", "light", "system"].includes(v)) return { type: "theme", value: v as "dark" };
   if (k === "mode" && ["academic", "learning", "project"].includes(v)) return { type: "mode", value: v as "academic" };
-  if (k === "view" && ["voyage", "learn", "plan", "oracle", "calendar", "list"].includes(v)) return { type: "view", value: v as View };
+  if (k === "view" && ["voyage", "learn", "plan", "oracle", "knowledge", "calendar", "list"].includes(v)) return { type: "view", value: v as View };
   if (k === "mast" || k === "tour" || k === "export" || k === "plan_today") return { type: k } as UiCommand;
   if (k === "recover") return { type: "recover", days: Math.min(14, Math.max(1, Number(v) || 3)) };
   return null;
@@ -123,6 +132,6 @@ export function fromUiString(s: string): UiCommand | null {
 export const UI_COMMANDS = [
   "theme:dark", "theme:light", "theme:system",
   "mode:academic", "mode:learning", "mode:project",
-  "view:voyage", "view:learn", "view:plan", "view:oracle", "view:calendar", "view:list",
+  "view:voyage", "view:learn", "view:plan", "view:oracle", "view:knowledge", "view:calendar", "view:list",
   "mast", "tour", "export", "plan_today", "recover:3",
 ];

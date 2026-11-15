@@ -12,6 +12,7 @@ import { buildIcs } from "@/lib/ics";
 import { COURSE_COLORS, load, save, uid } from "@/lib/storage";
 import { MESSY_SAMPLES, SAMPLES } from "@/lib/sample";
 import Recovery from "./Recovery";
+import KnowledgeMap from "./KnowledgeMap";
 import { recover, weekLoads } from "@/lib/recovery";
 import Upload from "./Upload";
 import NextUp from "./NextUp";
@@ -40,7 +41,7 @@ import { fmtMinutes } from "@/lib/plan";
 import { buildPlan, type StudySession } from "@/lib/plan";
 import { addDays, ymd } from "@/lib/dates";
 
-type View = "voyage" | "learn" | "plan" | "oracle" | "calendar" | "list";
+type View = "voyage" | "learn" | "plan" | "oracle" | "knowledge" | "calendar" | "list";
 
 interface ImportNote {
   course: string;
@@ -62,6 +63,7 @@ export default function App() {
   const [sessions, setSessions] = useState<StudySession[]>([]);
   const [touring, setTouring] = useState(false);
   const [focus, setFocus] = useState<{ session: StudySession | null } | null>(null);
+  const [gapHint, setGapHint] = useState<{ score?: number } | null>(null);
   const [recovering, setRecovering] = useState<{ days: number; auto: boolean } | null>(null);
   const [planOpts, setPlanOpts] = useState({ dailyMinutes: 180, weekends: true });
   const [server, setServer] = useState({ ai: false, sync: false });
@@ -372,7 +374,7 @@ export default function App() {
 
   // Everything Trojan can do to the app itself. Returns what Trojan says back.
   const runCommand = (c: UiCommand): string => {
-    const VIEW_NAME = { voyage: "the voyage map", learn: mode === "project" ? "the project plan" : "the learning path", plan: "your work plan", oracle: "the Oracle", calendar: "the calendar", list: `all your ${noun}s` };
+    const VIEW_NAME = { voyage: "the voyage map", learn: mode === "project" ? "the project plan" : "the learning path", plan: "your work plan", oracle: "the Oracle", knowledge: "your star chart", calendar: "the calendar", list: `all your ${noun}s` };
     switch (c.type) {
       case "theme":
         setTheme(c.value);
@@ -415,6 +417,13 @@ export default function App() {
         });
         return `${c.value === "hide" ? "Hid" : "Showing"} ${target.code}.`;
       }
+      case "gaps": {
+        if (mode !== "academic") setMode("academic");
+        setGapHint({ score: c.score });
+        setDraft(null);
+        setView("knowledge");
+        return "A failed quiz doesn't tell us which concept is missing yet. I opened your star chart: log the score, and a 2-minute check will find the real gap before I assign any practice.";
+      }
       case "recover": {
         if (mode !== "academic") setMode("academic");
         const acad = courses.filter((x) => modeOf(x) === "academic");
@@ -450,7 +459,7 @@ export default function App() {
   const empty = ready && modeCourses.length === 0;
   const graded = mode === "academic" ? visible.filter((e) => GRADED.includes(e.kind)) : visible.filter((e) => !e.done);
   const noun = mode === "academic" ? "deadline" : mode === "learning" ? "topic" : "task";
-  const tabs: View[] = mode === "academic" ? ["voyage", "plan", "oracle", "calendar", "list"] : ["voyage", "learn", "plan", "calendar", "list"];
+  const tabs: View[] = mode === "academic" ? ["voyage", "plan", "knowledge", "oracle", "calendar", "list"] : ["voyage", "learn", "plan", "calendar", "list"];
   const shown: View = tabs.includes(view) ? view : "voyage";
   const preview = draft && (
     <RoadmapPreview
@@ -591,7 +600,7 @@ export default function App() {
             <div className="tabs" role="tablist" aria-label="View">
               {tabs.map((v) => (
                 <button key={v} role="tab" className="tab" aria-selected={shown === v} onClick={() => { setDraft(null); setView(v); }}>
-                  {v === "voyage" ? "Voyage map" : v === "learn" ? (mode === "project" ? "Project plan" : "Learning path") : v === "plan" ? "Work plan" : v === "oracle" ? "The Oracle" : v === "calendar" ? "Calendar" : mode === "academic" ? "All deadlines" : `All ${noun}s`}
+                  {v === "voyage" ? "Voyage map" : v === "learn" ? (mode === "project" ? "Project plan" : "Learning path") : v === "plan" ? "Work plan" : v === "oracle" ? "The Oracle" : v === "knowledge" ? "Star chart" : v === "calendar" ? "Calendar" : mode === "academic" ? "All deadlines" : `All ${noun}s`}
                 </button>
               ))}
             </div>
@@ -634,6 +643,19 @@ export default function App() {
               )}
               {!draft && shown === "oracle" && <Oracle courses={courses} />}
               {!draft && shown === "calendar" && <CalendarView events={visible} hazards={hazards} courses={courseById} now={now} onOpen={(e) => setEditing(e)} />}
+              {!draft && shown === "knowledge" && (
+                <KnowledgeMap
+                  courses={modeCourses}
+                  events={modeEvents}
+                  today={today}
+                  failedHint={gapHint}
+                  onMessy={() => loadSamples(MESSY_SAMPLES)}
+                  onPractice={(list) => {
+                    setSessions((ss) => [...ss, ...list.map((x) => ({ ...x, id: uid("s") }))]);
+                    setToast(`${list.length} practice session${list.length > 1 ? "s" : ""} added to your work plan`);
+                  }}
+                />
+              )}
               {!draft && shown === "list" && <EventList events={visible} hazards={hazards} courses={courseById} onOpen={(e) => setEditing(e)} onToggle={toggleDone} />}
             </div>
             <aside className="stack">
