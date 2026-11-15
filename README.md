@@ -15,7 +15,7 @@ Built solo at HackUTA 2026 (theme: Homer's *Odyssey*).
   - Paste a link to a public syllabus page or PDF.
   - Paste your UTA Canvas **calendar feed** link (Canvas → Calendar → Calendar Feed). Every assignment and exam from all your courses comes in, grouped by course. No password needed.
   - Paste anything else: a Canvas page, your MyMav class schedule, your own notes. Pages behind a university login can't be fetched, and SyllabusSync never asks for your university password, so copy and paste works for those.
-  - Everything you add becomes something Blaze can answer questions about.
+  - Everything you add becomes something Trojan can answer questions about.
 - **Finds the dates.** A pattern parser handles `Sep 4`, `Sept. 4th`, `September 4, 2026`, `9/4`, `09/04/26`, `2026-09-04`, `4 September`, `the 4th of September`, ranges like `Nov 25-27`, times like `11:59 PM`, `noon`, `midnight`, and grade weights like `(25%)`.
 - **Works out the year.** Most syllabi never write it. We read the term ("Fall 2026", "2026 Fall", "Fall '26") and pick the year that puts each date inside that term, so a January date in a fall syllabus lands in the next year.
 - **Optional Gemini pass for messy syllabi.** Gemini returns structured deadlines, and each one has to quote the line it came from. We check every quote against the actual text and re-parse the date out of it. Anything that doesn't match is flagged, and anything the AI missed but the pattern parser found is still added for review.
@@ -25,17 +25,17 @@ Built solo at HackUTA 2026 (theme: Homer's *Odyssey*).
   - **Siren song:** something due on a day the syllabus says there's no class (usually a typo worth asking about).
   - **Safe harbor:** a holiday week.
 - **Work plan.** Turns deadlines into study sessions spread over the days before each one, within the hours you say you have per day. Overloaded days are flagged. Sessions can be renamed, resized, moved, finished or deleted, and anything you touch stays put when the plan rebalances.
-- **Blaze, the wooden horse.** The Greeks hid soldiers inside a horse; your answers are hiding inside your syllabi. Blaze is a study assistant drawn as a little wooden horse on wheels. Ask anything about your classes in plain English: "how is my grade calculated?", "what's the late policy?", "what should I do this week?", then keep going with follow-ups like "and when is that exam?". Blaze can also act on your schedule: "plan my next 3 days", "move my Exam 3 study session to Monday", "add my ACM meeting Thursday at 6", "export my calendar". Every change shows up as a card you Apply or Skip, so nothing changes without you. Blaze answers only from your syllabi, deadlines and study plan (Gemini, with the conversation as history), shows the exact syllabus line behind each answer, and we check that each quoted line really exists. Without a Gemini key it still answers deadline questions and searches your syllabi.
+- **Trojan, the wooden horse.** The Greeks hid soldiers inside a horse; your answers are hiding inside your syllabi. Trojan is a study assistant drawn as a little wooden horse on wheels. Ask anything about your classes in plain English: "how is my grade calculated?", "what's the late policy?", "what should I do this week?", then keep going with follow-ups like "and when is that exam?". Trojan can also act on your schedule: "plan my next 3 days", "move my Exam 3 study session to Monday", "add my ACM meeting Thursday at 6", "export my calendar". Every change shows up as a card you Apply or Skip, so nothing changes without you. Trojan answers only from your syllabi, deadlines and study plan (Gemini, with the conversation as history), shows the exact syllabus line behind each answer, and we check that each quoted line really exists. Without a Gemini key it still answers deadline questions and searches your syllabi.
 - **Mast mode.** Odysseus had himself tied to the mast to sail past the Sirens. This focus timer sails a ship to the next island as you work, and if you switch tabs the Sirens start singing and it counts how many times they got you. Finished sessions are checked off in your plan.
 - **The Oracle.** Reads the grade weights from your syllabus and tells you the exact average you need on the rest of the class for an A (or that "even the gods can't get you there"), with a what-if slider.
 - **The Cyclops and the Lotus-eaters.** Your biggest exam ahead gets an eye on the map. Past work you never checked off is flagged, with one click to tick it all off.
-- **Talk to Blaze.** Ask out loud with the mic button and hear answers spoken back (browser speech, no extra keys).
+- **Talk to Trojan.** Ask out loud with the mic button and hear answers spoken back (browser speech, no extra keys).
 - **Learning voyages, for learning without a syllabus.** Not everyone learns in a class. Pick a goal (AI and machine learning, data analysis, frontend web, cyber security) or type any goal, and you get a staged roadmap on the same voyage map, scheduled at your pace and fed into the work plan.
   - **Recommended links for every topic:** courses, YouTube channels and docs (Andrew Ng, fast.ai, 3Blue1Brown, StatQuest, Karpathy, CS50, Corey Schafer, Kevin Powell, Professor Messer, Kaggle Learn, Hugging Face and more), each marked Free, Free to audit or Paid.
   - **Certifications per stage** (Kaggle, freeCodeCamp, Microsoft AI-900 and PL-300, AWS AI Practitioner, Google Data Analytics and Cybersecurity, Meta Front-End, CompTIA Security+ and others), marked free or paid.
   - **Put it to work:** every stage says what you can now do for someone, the kinds of student work it opens (freelance gigs, campus jobs, internships, competitions) and how to show it. Opportunities, never income promises.
   - **Prove it before you tick it:** each topic has an explain-it-back question. With Gemini on, it reads your answer like a tutor, says what's missing and asks a follow-up, without giving the answer away. Offline, answers must be at least 30 words and mostly typed, not pasted. Projects need a link.
-  - **Learn with AI, not by AI:** five rules on the page, a "Quiz me" button on every topic that opens Blaze as a quizmaster, and Blaze is told to give hints before answers on roadmap topics.
+  - **Learn with AI, not by AI:** five rules on the page, a "Quiz me" button on every topic that opens Trojan as a quizmaster, and Trojan is told to give hints before answers on roadmap topics.
   - For goals we haven't curated, Gemini drafts the topics, questions and opportunities, and the app attaches search links itself, so you never see a URL a model made up.
   - **About roadmap.sh:** its roadmaps are great, but their licence allows linking, not copying. So every outline here is our own, and each track links to the matching roadmap.sh roadmap ("Full map") for the complete community version, with credit.
 - **Guided demo.** "Take the 60-second guided demo" loads sample syllabi and walks through every feature.
@@ -69,7 +69,7 @@ Optional environment variables (see `.env.example`):
 
 | Variable | What it enables |
 | --- | --- |
-| `GEMINI_API_KEY` | "Read with Gemini" on upload, and Blaze's full chat mode |
+| `GEMINI_API_KEY` | "Read with Gemini" on upload, and Trojan's full chat mode |
 | `GEMINI_MODEL` | Override the model (default `gemini-3.5-flash`, falling back to other Flash models if one is busy or retired) |
 | `MONGODB_URI` | Cloud sync of courses, deadlines and study sessions |
 | `MONGODB_DB` | Database name (default `syllabus_sync`) |

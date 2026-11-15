@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { fromUiString, parseCommand } from "@/lib/commands";
 
-describe("Blaze app commands", () => {
+describe("Trojan app commands", () => {
   it("understands theme, navigation and timers, typos included", () => {
     expect(parseCommand("dark mode")).toEqual({ type: "theme", value: "dark" });
     expect(parseCommand("turn on drak mode pls")).toEqual({ type: "theme", value: "dark" });
@@ -28,7 +28,7 @@ describe("Blaze app commands", () => {
     expect(parseCommand("hide CSE 3318", ["CSE 3318", "MATH 3330"])).toEqual({ type: "course", value: "hide", course: "CSE 3318" });
   });
 
-  it("leaves real questions for Blaze", () => {
+  it("leaves real questions for Trojan", () => {
     expect(parseCommand("when is my midterm?")).toBeNull();
     expect(parseCommand("how is my grade calculated")).toBeNull();
     expect(parseCommand("what's the late policy for CSE 3318")).toBeNull();

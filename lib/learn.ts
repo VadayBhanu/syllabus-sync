@@ -1,5 +1,5 @@
 // Turns a learning roadmap into a "course" with dated topics, so the voyage map, the work
-// plan, hazards, calendar export and Blaze all work on it without special cases.
+// plan, hazards, calendar export and Trojan all work on it without special cases.
 
 import type { Course, SyllabusEvent } from "./types";
 import type { Track } from "./roadmaps";

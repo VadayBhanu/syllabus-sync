@@ -85,7 +85,7 @@ export function parseIcs(text: string): IcsCourseGroup[] {
   return [...groups.values()];
 }
 
-/** Plain-text version of a feed for Blaze to read. */
+/** Plain-text version of a feed for Trojan to read. */
 export function icsGroupText(g: IcsCourseGroup) {
   return `${g.code} (from calendar feed)\n` + g.events.map((e) => `${e.date}${e.time ? " " + e.time : ""} ${e.title}`).join("\n");
 }

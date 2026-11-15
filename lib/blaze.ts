@@ -1,5 +1,5 @@
-// Blaze: the study assistant. This file holds the parts that run in the browser:
-// packing up the student's context, checking Blaze's citations, and a small offline
+// Trojan: the study assistant. This file holds the parts that run in the browser:
+// packing up the student's context, checking Trojan's citations, and a small offline
 // mode that still answers the common questions when Gemini isn't available.
 
 import type { Course, SyllabusEvent } from "./types";
@@ -8,13 +8,13 @@ import type { StudySession } from "./plan";
 import { addDays, prettyDate, prettyTime, weekStart, ymd } from "./dates";
 import { quoteFound } from "./verify";
 
-export interface BlazeCitation {
+export interface TrojanCitation {
   course: string;
   quote: string;
   verified?: boolean;
 }
 
-export type BlazeActionType =
+export type TrojanActionType =
   | "add_deadline"
   | "update_deadline"
   | "remove_deadline"
@@ -28,9 +28,9 @@ export type BlazeActionType =
   | "rebalance_plan"
   | "export_calendar";
 
-/** A change Blaze proposes. Nothing happens until the student presses Apply. */
-export interface BlazeAction {
-  type: BlazeActionType;
+/** A change Trojan proposes. Nothing happens until the student presses Apply. */
+export interface TrojanAction {
+  type: TrojanActionType;
   summary: string;
   id?: string;
   course?: string;
@@ -47,16 +47,16 @@ export interface BlazeAction {
   error?: string;
 }
 
-export interface BlazeMessage {
+export interface TrojanMessage {
   role: "user" | "blaze";
   text: string;
-  citations?: BlazeCitation[];
+  citations?: TrojanCitation[];
   followUps?: string[];
-  actions?: BlazeAction[];
+  actions?: TrojanAction[];
   offline?: boolean;
 }
 
-export interface BlazeContext {
+export interface TrojanContext {
   today: string;
   courses: { code: string; name: string; term?: string; text: string }[];
   deadlines: string[];
@@ -66,7 +66,7 @@ export interface BlazeContext {
 
 const MAX_TEXT_PER_COURSE = 25_000;
 
-export function buildContext(courses: Course[], events: SyllabusEvent[], sessions: StudySession[], now = new Date(), dailyMinutes?: number): BlazeContext {
+export function buildContext(courses: Course[], events: SyllabusEvent[], sessions: StudySession[], now = new Date(), dailyMinutes?: number): TrojanContext {
   const today = ymd(now);
   const byId = new Map(courses.map((c) => [c.id, c]));
   const deadlines = [...events]
@@ -88,7 +88,7 @@ export function buildContext(courses: Course[], events: SyllabusEvent[], session
 }
 
 /** Mark each citation as verified if the quote really appears in that course's syllabus. */
-export function checkCitations(cites: BlazeCitation[], courses: Course[]): BlazeCitation[] {
+export function checkCitations(cites: TrojanCitation[], courses: Course[]): TrojanCitation[] {
   return cites
     .filter((c) => c?.quote?.trim())
     .map((c) => {
@@ -115,13 +115,13 @@ function describe(e: SyllabusEvent, courses: Course[]) {
  * Answers without the network. Handles "what's due this week / today / next week",
  * "when is X", and otherwise falls back to finding the most relevant syllabus lines.
  */
-export function offlineAnswer(q: string, courses: Course[], events: SyllabusEvent[], now = new Date()): BlazeMessage {
+export function offlineAnswer(q: string, courses: Course[], events: SyllabusEvent[], now = new Date()): TrojanMessage {
   const today = ymd(now);
   const lower = q.toLowerCase();
   const graded = events.filter((e) => GRADED.includes(e.kind) && !e.done).sort((a, b) => (a.date + (a.time ?? "")).localeCompare(b.date + (b.time ?? "")));
   const list = (items: SyllabusEvent[]) => items.map((e) => "• " + describe(e, courses)).join("\n");
 
-  const range = (from: string, to: string, label: string): BlazeMessage => {
+  const range = (from: string, to: string, label: string): TrojanMessage => {
     const items = graded.filter((e) => e.date >= from && e.date <= to);
     return {
       role: "blaze",

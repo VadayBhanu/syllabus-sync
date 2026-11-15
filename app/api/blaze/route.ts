@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { generate } from "@/lib/gemini";
 import { UI_COMMANDS } from "@/lib/commands";
 
-// Blaze: a study assistant that answers from the student's own syllabi and deadlines.
+// Trojan: a study assistant that answers from the student's own syllabi and deadlines.
 // Multi-turn: the browser sends the conversation so far, and we pass it to Gemini as history.
 
 export const runtime = "nodejs";
@@ -67,7 +67,7 @@ function system(ctx: Ctx) {
   const syllabi = ctx.courses
     .map((c) => `=== ${c.code}${c.name ? " - " + c.name : ""}${c.term ? " (" + c.term + ")" : ""} ===\n${c.text || "(no syllabus text, deadlines only)"}`)
     .join("\n\n");
-  return `You are Blaze, a friendly, sharp study assistant inside SyllabusSync. Students upload their course syllabi and you help them find anything in them: grading breakdowns, late policies, office hours, exam dates and rooms, what's due when, how to plan their week.
+  return `You are Trojan, a friendly, sharp study assistant inside SyllabusSync. Students upload their course syllabi and you help them find anything in them: grading breakdowns, late policies, office hours, exam dates and rooms, what's due when, how to plan their week.
 
 Today is ${ctx.today}.
 
@@ -83,7 +83,7 @@ How to answer:
 - "Plan my week" or similar: propose add_session actions spread over the coming days before each deadline, keeping each day at or under ${ctx.dailyMinutes ?? 180} minutes in total including sessions already planned, 30 to 120 minutes each, titled like "Study for Exam 3".
 - Something new the syllabus doesn't list (a club meeting, a reminder): add_deadline with kind "other".
 - You can also drive the app itself. For dark or light theme, opening a tab (voyage map, learning path or project plan, work plan, Oracle, calendar, list), switching between Academic, Self-study and Project mode, starting Mast mode, starting the guided tour, exporting the calendar, or preparing today's schedule, add an action of type "ui" with the matching command. These run straight away without a confirmation card, so say it's done ("Switched to dark mode."). Data changes (deadlines, sessions, sources) still go through Apply.
-- App vocabulary (students may misspell these; read "dhips log" as ship's log, "orcale" as Oracle, and so on): the Voyage map is the route of weekly islands; the Ship's log is the voyage map's panel that lists each week's stops; a stop is any deadline, topic or task on the map; Blaze is you; Mast mode is the focus timer; The Oracle is the grade calculator; the Work plan is the study sessions; the Learning path and Project plan list stages; Scylla & Charybdis, Storm, Siren song, Cyclops and Lotus-eaters are warnings.
+- App vocabulary (students may misspell these; read "dhips log" as ship's log, "orcale" as Oracle, and so on): the Voyage map is the route of weekly islands; the Ship's log is the voyage map's panel that lists each week's stops; a stop is any deadline, topic or task on the map; Trojan is you; Mast mode is the focus timer; The Oracle is the grade calculator; the Work plan is the study sessions; the Learning path and Project plan list stages; Scylla & Charybdis, Storm, Siren song, Cyclops and Lotus-eaters are warnings.
 - "Where can I study X", "add sources/links", or "add that to the ship's log" about a stop: propose attach_sources with that stop's [id] (one action per stop) and put a short, specific search phrase in title (e.g. "HubSpot Academy marketing funnel"). The app attaches trusted direct links and searches itself, so never write URLs in your answer. If the stop doesn't exist yet, propose add_deadline first.
 - Students can edit their voyage map through you. "Add a stop/topic/task/milestone" is add_deadline (use the roadmap or project's code as course, its stage name as stage, and minutes for the study or work time; kind "reading" for a learning topic, "assignment" for a project task, "project" for a milestone). Renaming or moving a stop is update_deadline with its [id]; removing it is remove_deadline. Pick a sensible date if they don't give one.
 - Some "courses" are personal project plans (their text says "personal project plan"). Help plan the work, break down tasks, unblock them and suggest what to do next.
@@ -123,7 +123,7 @@ export async function POST(req: Request) {
     generationConfig: { temperature: 0.3, responseMimeType: "application/json", responseSchema: schema },
   });
   if (!r.ok) {
-    const msg = r.timedOut ? "Blaze took too long. Try asking again." : r.status === 429 || r.status === 503 ? "Blaze is getting a lot of questions right now. Try again in a moment." : "Blaze couldn't answer that one.";
+    const msg = r.timedOut ? "Trojan took too long. Try asking again." : r.status === 429 || r.status === 503 ? "Trojan is getting a lot of questions right now. Try again in a moment." : "Trojan couldn't answer that one.";
     return NextResponse.json({ error: msg }, { status: 502 });
   }
   try {

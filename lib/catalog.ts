@@ -81,7 +81,7 @@ const SEARCH: [string, (q: string) => string, Resource["cost"]][] = [
 
 /**
  * Sources for one stop on the map: direct catalogue links first, then labelled searches on a few
- * trusted platforms. `phrase` lets Blaze sharpen the search ("HubSpot marketing funnel") without
+ * trusted platforms. `phrase` lets Trojan sharpen the search ("HubSpot marketing funnel") without
  * ever handing us a URL.
  */
 export function sourcesFor(topic: string, goal = "", phrase?: string): Resource[] {

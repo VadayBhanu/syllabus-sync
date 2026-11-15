@@ -49,7 +49,7 @@ export interface Course {
   color: string;
   term?: string;
   fileName?: string;
-  /** extracted syllabus text, kept so Blaze can answer questions about it */
+  /** extracted syllabus text, kept so Trojan can answer questions about it */
   text?: string;
   /** set when this is a self-study roadmap rather than a class */
   learning?: {

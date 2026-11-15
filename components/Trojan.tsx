@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import type { Course, SyllabusEvent } from "@/lib/types";
 import type { StudySession } from "@/lib/plan";
 import { fromUiString, parseCommand, type UiCommand } from "@/lib/commands";
-import { buildContext, checkCitations, offlineAnswer, type BlazeAction, type BlazeMessage } from "@/lib/blaze";
+import { buildContext, checkCitations, offlineAnswer, type TrojanAction, type TrojanMessage } from "@/lib/blaze";
 
 interface Props {
   courses: Course[];
@@ -13,7 +13,7 @@ interface Props {
   online: boolean;
   dailyMinutes: number;
   /** apply one confirmed action; returns an error message if it couldn't */
-  onAction: (a: BlazeAction) => string | undefined;
+  onAction: (a: TrojanAction) => string | undefined;
   /** run an app command (theme, navigation, timer...) and return what to say */
   onCommand?: (c: UiCommand) => string;
 }
@@ -25,9 +25,9 @@ const STARTERS = [
   "When and where is my next exam?",
 ];
 
-export default function Blaze({ courses, events, sessions, online, dailyMinutes, onAction, onCommand }: Props) {
+export default function Trojan({ courses, events, sessions, online, dailyMinutes, onAction, onCommand }: Props) {
   const [open, setOpen] = useState(false);
-  const [msgs, setMsgs] = useState<BlazeMessage[]>([]);
+  const [msgs, setMsgs] = useState<TrojanMessage[]>([]);
   const [input, setInput] = useState("");
   const [busy, setBusy] = useState(false);
   // Voice: browser speech recognition to ask, speech synthesis to answer. No keys needed.
@@ -93,7 +93,7 @@ export default function Blaze({ courses, events, sessions, online, dailyMinutes,
     return () => window.removeEventListener("keydown", onKey);
   }, [open]);
 
-  // Other parts of the app (e.g. "Quiz me" on a learning topic) can open Blaze with a question.
+  // Other parts of the app (e.g. "Quiz me" on a learning topic) can open Trojan with a question.
   const askRef = useRef<(q: string) => void>(() => {});
   useEffect(() => {
     const onAsk = (e: Event) => {
@@ -109,11 +109,11 @@ export default function Blaze({ courses, events, sessions, online, dailyMinutes,
   async function ask(q: string) {
     const question = q.trim();
     if (!question || busy) return;
-    const history: BlazeMessage[] = [...msgs, { role: "user", text: question }];
+    const history: TrojanMessage[] = [...msgs, { role: "user", text: question }];
     setMsgs(history);
     setInput("");
     setBusy(true);
-    let reply: BlazeMessage;
+    let reply: TrojanMessage;
     // app commands ("dark mode", "open the oracle", "plan my day") run here, instantly and offline
     const cmd = onCommand ? parseCommand(question, courses.map((c) => c.code)) : null;
     if (cmd && onCommand) {
@@ -138,8 +138,8 @@ export default function Blaze({ courses, events, sessions, online, dailyMinutes,
             citations: checkCitations(data.citations ?? [], courses),
             followUps: data.followUps,
             actions: (data.actions ?? [])
-              .filter((a: BlazeAction) => a?.type && a?.summary)
-              .map((a: BlazeAction) => {
+              .filter((a: TrojanAction) => a?.type && a?.summary)
+              .map((a: TrojanAction) => {
                 // UI commands are harmless, so they run now; data changes wait for Apply
                 if (a.type !== "ui") return { ...a, status: "pending" as const };
                 const c = fromUiString(a.command ?? "");
@@ -149,7 +149,7 @@ export default function Blaze({ courses, events, sessions, online, dailyMinutes,
               }),
           };
         } else {
-          reply = { ...offlineAnswer(question, courses, events), text: `${data.error ?? "Blaze is offline."} Here's what I can find on my own:\n\n${offlineAnswer(question, courses, events).text}` };
+          reply = { ...offlineAnswer(question, courses, events), text: `${data.error ?? "Trojan is offline."} Here's what I can find on my own:\n\n${offlineAnswer(question, courses, events).text}` };
         }
       } catch {
         reply = offlineAnswer(question, courses, events);
@@ -162,7 +162,7 @@ export default function Blaze({ courses, events, sessions, online, dailyMinutes,
 
   const last = msgs[msgs.length - 1];
 
-  // Apply (or skip) one of Blaze's proposed changes, or all pending ones in a message.
+  // Apply (or skip) one of Trojan's proposed changes, or all pending ones in a message.
   function resolve(mi: number, which: number | "all", apply: boolean) {
     setMsgs((ms) =>
       ms.map((m, i) => {
@@ -182,22 +182,22 @@ export default function Blaze({ courses, events, sessions, online, dailyMinutes,
   return (
     <>
       {!open && (
-        <button className="blaze-fab" onClick={() => setOpen(true)} aria-label="Ask Blaze, your study assistant">
-          <Horse /> Ask Blaze
+        <button className="blaze-fab" onClick={() => setOpen(true)} aria-label="Ask Trojan, your study assistant">
+          <Horse /> Ask Trojan
         </button>
       )}
       {open && (
-        <aside className="blaze" role="dialog" aria-label="Blaze study assistant">
+        <aside className="blaze" role="dialog" aria-label="Trojan study assistant">
           <header className="blaze-head">
             <Horse />
             <div className="grow">
-              <b>Blaze</b>
+              <b>Trojan</b>
               <div className="tiny muted">{online ? "The wooden horse with your answers inside · Gemini" : "Offline mode: deadlines and syllabus search"}</div>
             </div>
             <button
               className="btn ghost small"
               aria-pressed={speak}
-              title={speak ? "Blaze reads answers aloud" : "Turn on spoken answers"}
+              title={speak ? "Trojan reads answers aloud" : "Turn on spoken answers"}
               onClick={() => {
                 if (speak) window.speechSynthesis?.cancel();
                 setSpeak(!speak);
@@ -206,14 +206,14 @@ export default function Blaze({ courses, events, sessions, online, dailyMinutes,
               {speak ? "🔊" : "🔈"}
             </button>
             {msgs.length > 0 && <button className="btn ghost small" onClick={() => setMsgs([])}>New chat</button>}
-            <button className="btn ghost small" onClick={() => setOpen(false)} aria-label="Close Blaze">×</button>
+            <button className="btn ghost small" onClick={() => setOpen(false)} aria-label="Close Trojan">×</button>
           </header>
 
           <div className="blaze-body" ref={scroller} aria-live="polite">
             {msgs.length === 0 && (
               <div className="small">
                 <p style={{ marginTop: 0 }}>
-                  I&apos;m Blaze, the wooden horse. The Greeks hid soldiers inside me; you&apos;ve hidden answers inside your{" "}
+                  I&apos;m Trojan, the wooden horse. The Greeks hid soldiers inside me; you&apos;ve hidden answers inside your{" "}
                   {courses.length ? `${courses.length} syllab${courses.length > 1 ? "i" : "us"}` : "syllabi"}. Ask about grading, policies, office hours or what&apos;s due, and I&apos;ll
                   open the hatch and show you the exact line each answer came from.
                 </p>
@@ -227,7 +227,7 @@ export default function Blaze({ courses, events, sessions, online, dailyMinutes,
                 <div style={{ whiteSpace: "pre-wrap" }}>{m.text}</div>
                 {m.actions && m.actions.length > 0 && (
                   <div className="actions">
-                    <div className="tiny muted">Blaze wants to make {m.actions.length === 1 ? "this change" : `${m.actions.length} changes`}. Nothing happens until you apply.</div>
+                    <div className="tiny muted">Trojan wants to make {m.actions.length === 1 ? "this change" : `${m.actions.length} changes`}. Nothing happens until you apply.</div>
                     {m.actions.map((a, k) => (
                       <div key={k} className={`action ${a.status}`}>
                         <span className="grow">{a.summary}</span>
@@ -288,11 +288,11 @@ export default function Blaze({ courses, events, sessions, online, dailyMinutes,
                   }
                 }}
                 placeholder="Ask about any class…"
-                aria-label="Message Blaze"
+                aria-label="Message Trojan"
                 className="blaze-input"
               />
               {canListen && (
-                <button type="button" className={`btn ${listening ? "listening" : ""}`} onClick={listen} aria-label={listening ? "Stop listening" : "Ask Blaze out loud"} title="Ask out loud">
+                <button type="button" className={`btn ${listening ? "listening" : ""}`} onClick={listen} aria-label={listening ? "Stop listening" : "Ask Trojan out loud"} title="Ask out loud">
                   {listening ? "● Listening" : "🎙"}
                 </button>
               )}
@@ -305,7 +305,7 @@ export default function Blaze({ courses, events, sessions, online, dailyMinutes,
   );
 }
 
-/** Blaze is a wooden horse on wheels, with a little hatch where the answers hide. Original artwork. */
+/** Trojan is a wooden horse on wheels, with a little hatch where the answers hide. Original artwork. */
 export function Horse({ size = 26 }: { size?: number }) {
   return (
     <svg width={size} height={size} viewBox="0 0 32 32" aria-hidden="true">

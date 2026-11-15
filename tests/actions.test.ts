@@ -10,7 +10,7 @@ const base = (): AppState => ({
   plan: { dailyMinutes: 180, weekends: true },
 });
 
-describe("Blaze actions", () => {
+describe("Trojan actions", () => {
   it("adds a deadline to an existing or new course", () => {
     const r = applyAction(base(), { type: "add_deadline", summary: "", course: "ACM", title: "Club meeting", date: "2026-11-19", time: "18:00" }, id);
     expect(r.state!.courses).toHaveLength(2);

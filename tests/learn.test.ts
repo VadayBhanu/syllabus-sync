@@ -135,7 +135,7 @@ describe("modes, projects and editing the map", () => {
     expect(r[0].url).toBe("https://www.youtube.com/results?search_query=StatQuest%20logistic%20regression");
   });
 
-  it("Blaze can add a topic to a roadmap stage, creating the stage if needed", () => {
+  it("Trojan can add a topic to a roadmap stage, creating the stage if needed", () => {
     const { course, events } = trackToCourse(TRACKS[0], { start: "2026-11-16", hoursPerWeek: 8 }, "#000", id);
     const state = { courses: [course], events, sessions: [], plan: { dailyMinutes: 180, weekends: true } };
     const r = applyAction(state, { type: "add_deadline", summary: "x", course: "AI", title: "Vector databases", date: "2027-03-20", stage: "LLMs and AI apps", minutes: 180 }, (p) => id(p));
@@ -167,7 +167,7 @@ describe("direct study sources", () => {
     expect(r[0].url).toContain("Glaze%20chemistry%20basics");
   });
 
-  it("Blaze's attach_sources adds catalogue links to a stop", () => {
+  it("Trojan's attach_sources adds catalogue links to a stop", () => {
     const { course, events } = trackToCourse(outlineFor("marketing"), { start: "2026-11-16", hoursPerWeek: 5 }, "#000", id);
     const ev = { ...events[0], title: "Competitor Market Analysis", links: [] };
     const state = { courses: [course], events: [ev], sessions: [], plan: { dailyMinutes: 180, weekends: true } };

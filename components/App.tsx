@@ -20,7 +20,7 @@ import EventEditor from "./EventEditor";
 import Hazards from "./Hazards";
 import WorkPlan from "./WorkPlan";
 import CloudSync from "./CloudSync";
-import Blaze from "./Blaze";
+import Trojan from "./Trojan";
 import MastMode from "./MastMode";
 import Oracle from "./Oracle";
 import Tour from "./Tour";
@@ -223,7 +223,7 @@ export default function App() {
         result.events.length
           ? `${code}: ${result.events.length} items charted${existing ? " (replaced the old import)" : ""}`
           : asCode
-            ? `${code}: saved. Blaze can answer questions about it.`
+            ? `${code}: saved. Trojan can answer questions about it.`
             : `${code}: no deadlines found. You can add them by hand.`,
       );
     },
@@ -364,10 +364,10 @@ export default function App() {
     const links = mergeLinks(sourcesFor(ev.title, course?.name ?? ""), ev.links ?? [], 8);
     setEvents((es) => es.map((e) => (e.id === id ? { ...e, links } : e)));
     const direct = links.filter((r) => r.kind !== "search").length;
-    setToast(direct ? `${direct} direct source${direct > 1 ? "s" : ""} added to ${ev.title}` : `Added searches for ${ev.title}. Ask Blaze for a sharper search.`);
+    setToast(direct ? `${direct} direct source${direct > 1 ? "s" : ""} added to ${ev.title}` : `Added searches for ${ev.title}. Ask Trojan for a sharper search.`);
   };
 
-  // Everything Blaze can do to the app itself. Returns what Blaze says back.
+  // Everything Trojan can do to the app itself. Returns what Trojan says back.
   const runCommand = (c: UiCommand): string => {
     const VIEW_NAME = { voyage: "the voyage map", learn: mode === "project" ? "the project plan" : "the learning path", plan: "your work plan", oracle: "the Oracle", calendar: "the calendar", list: `all your ${noun}s` };
     switch (c.type) {
@@ -468,7 +468,7 @@ export default function App() {
           <button
             className="btn theme-btn"
             onClick={() => setTheme((theme === "system" ? (window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light") : theme) === "dark" ? "light" : "dark")}
-            title="Switch light or dark theme (or ask Blaze: dark mode)"
+            title="Switch light or dark theme (or ask Trojan: dark mode)"
             aria-label="Switch light or dark theme"
           >
             {theme === "dark" ? "☀️" : theme === "light" ? "🌙" : "◐"}
@@ -508,12 +508,12 @@ export default function App() {
               <p>
                 Pick a goal like AI or cyber security and get stages and topics on the voyage map, with where to study each one,
                 certifications, and what each stage lets you do for others. You prove each topic in your own words before it counts,
-                and Blaze quizzes you instead of doing it for you.
+                and Trojan quizzes you instead of doing it for you.
               </p>
             ) : (
               <p>
                 Describe your project and when it should be done. You get milestones and tasks on the voyage map, fitted to your
-                deadline, with where to learn what each task needs. Edit the map any way you like, or ask Blaze to add stops.
+                deadline, with where to learn what each task needs. Edit the map any way you like, or ask Trojan to add stops.
               </p>
             )}
           </div>
@@ -696,7 +696,7 @@ export default function App() {
         />
       )}
       {ready && (
-        <Blaze
+        <Trojan
           courses={modeCourses}
           events={modeEvents}
           sessions={modeSessions}

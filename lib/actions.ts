@@ -1,7 +1,7 @@
-// Applies a change Blaze proposed, after the student pressed Apply. Pure: takes the
+// Applies a change Trojan proposed, after the student pressed Apply. Pure: takes the
 // current state, returns the new one or an error explaining why it can't be done.
 
-import type { BlazeAction } from "./blaze";
+import type { TrojanAction } from "./blaze";
 import type { Course, EventKind, SyllabusEvent } from "./types";
 import type { StudySession } from "./plan";
 import { isValidDate } from "./dates";
@@ -19,7 +19,7 @@ const KINDS: EventKind[] = ["exam", "quiz", "project", "assignment", "lab", "rea
 const okDate = (d?: string) => !!d && /^\d{4}-\d{2}-\d{2}$/.test(d) && isValidDate(+d.slice(0, 4), +d.slice(5, 7), +d.slice(8, 10));
 const okTime = (t?: string | null) => (t && /^([01]\d|2[0-3]):[0-5]\d$/.test(t) ? t : undefined);
 
-export function applyAction(s: AppState, a: BlazeAction, makeId: (p: string) => string): { state?: AppState; error?: string } {
+export function applyAction(s: AppState, a: TrojanAction, makeId: (p: string) => string): { state?: AppState; error?: string } {
   const ev = a.id ? s.events.find((e) => e.id === a.id) : undefined;
   const ses = a.id ? s.sessions.find((x) => x.id === a.id) : undefined;
 
@@ -43,7 +43,7 @@ export function applyAction(s: AppState, a: BlazeAction, makeId: (p: string) => 
         kind: KINDS.includes(a.kind as EventKind) ? (a.kind as EventKind) : "other",
         confidence: "high",
         manual: true,
-        source: "Added by Blaze",
+        source: "Added by Trojan",
       };
       // stops on a roadmap or project plan: keep them in a stage and give them study time
       if (course.learning) {
@@ -75,7 +75,7 @@ export function applyAction(s: AppState, a: BlazeAction, makeId: (p: string) => 
       return { state: { ...s, events: s.events.map((e) => (e.id === ev.id ? next : e)) } };
     }
     case "attach_sources": {
-      // Blaze names the stop (and maybe a better search phrase); the links come from our own
+      // Trojan names the stop (and maybe a better search phrase); the links come from our own
       // catalogue and trusted search pages, never from the model.
       if (!ev) return { error: "That stop no longer exists." };
       const course = s.courses.find((c) => c.id === ev.courseId);
@@ -124,6 +124,6 @@ export function applyAction(s: AppState, a: BlazeAction, makeId: (p: string) => 
     case "export_calendar":
       return { state: s };
     default:
-      return { error: "Blaze suggested something I don't know how to do." };
+      return { error: "Trojan suggested something I don't know how to do." };
   }
 }

@@ -102,7 +102,7 @@ export default function ProveIt({ event, ai, onPass, onClose }: Props) {
           <button className="btn primary small" disabled={busy || !answer.trim()} onClick={submit}>
             {busy ? "Checking…" : graded ? (result ? "Check again" : "Check my answer") : "Tick it off"}
           </button>
-          <button className="btn small" onClick={quiz} title="Practise with Blaze first">Quiz me with Blaze</button>
+          <button className="btn small" onClick={quiz} title="Practise with Trojan first">Quiz me with Trojan</button>
           <span className="grow" />
           {graded && tries >= 2 && answer.trim() && (
             <button className="btn ghost small" onClick={() => onPass({ answer: full(), verdict: "self", feedback: result?.feedback, at: new Date().toISOString() })}>

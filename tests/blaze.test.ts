@@ -8,7 +8,7 @@ const NOW = new Date(2026, 10, 14, 15, 0);
 const course: Course = { id: "c1", code: "CSE 3318", name: "Algorithms", color: "#000", text: SAMPLE_CSE };
 const events: SyllabusEvent[] = parseSyllabus(SAMPLE_CSE, NOW).events.map((e, i) => ({ ...e, id: "e" + i, courseId: "c1" }));
 
-describe("Blaze offline mode", () => {
+describe("Trojan offline mode", () => {
   it("answers what's due next week from deadlines", () => {
     const a = offlineAnswer("what's due next week?", [course], events, NOW);
     expect(a.text).toContain("Project milestone 2");
@@ -23,7 +23,7 @@ describe("Blaze offline mode", () => {
   });
 });
 
-describe("Blaze citations", () => {
+describe("Trojan citations", () => {
   it("verifies real quotes and flags made-up ones", () => {
     const c = checkCitations(
       [

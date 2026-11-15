@@ -1,4 +1,4 @@
-// App commands Blaze can run without asking Gemini: theme, navigation, timers, export and
+// App commands Trojan can run without asking Gemini: theme, navigation, timers, export and
 // "plan my day". Parsed locally so they're instant, work offline and cost no AI quota.
 // Typos are forgiven ("drak mode", "opne the oracel").
 
@@ -65,7 +65,7 @@ const VIEWS: [RegExp, View][] = [
   [/\b(list|deadlines|all tasks|all topics)\b/, "list"],
 ];
 
-/** A command if the message is one, otherwise null (and it goes to Blaze as a question). */
+/** A command if the message is one, otherwise null (and it goes to Trojan as a question). */
 export function parseCommand(text: string, courseCodes: string[] = []): UiCommand | null {
   const t = normalize(text);
   if (!t || t.split(" ").length > 12) return null;

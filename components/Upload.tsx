@@ -207,10 +207,10 @@ export default function Upload({ onText, onCalendar, onSamples, compact, ai, use
           </div>
           <p className="tiny muted" style={{ margin: 0 }}>
             {pasteKind === "MyMav class schedule"
-              ? "In MyMav, open your class schedule, select it all and copy. Blaze will know your class times and rooms."
+              ? "In MyMav, open your class schedule, select it all and copy. Trojan will know your class times and rooms."
               : pasteKind === "Canvas page"
                 ? "Open the Canvas syllabus or assignments page, select all, copy and paste here."
-                : "Paste the syllabus text. Dates are pulled out, and Blaze can answer questions about all of it."}
+                : "Paste the syllabus text. Dates are pulled out, and Trojan can answer questions about all of it."}
           </p>
           <textarea
             className="paste"

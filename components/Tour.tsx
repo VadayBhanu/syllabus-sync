@@ -21,7 +21,7 @@ const STEPS: Step[] = [
   { view: "plan", target: ".split > div > .panel", title: "A work plan that fits your life", text: "Study sessions spread over the days before each deadline, within the hours you have. Overloaded days turn red. Move, resize or rename anything, and press ⛵ Focus to start a session." },
   { view: "plan", target: ".mast-btn", title: "Mast mode", text: "Tie yourself to the mast like Odysseus. A focus timer where switching tabs means the Sirens got you." },
   { view: "oracle", target: ".oracle-verdict", title: "The Oracle", text: "It reads the grade weights from your syllabus and tells you exactly what you need on the rest of the class." },
-  { view: "voyage", target: ".blaze-fab", title: "Blaze, the wooden horse", text: "Ask anything about your syllabi, by typing or out loud, and keep asking follow-ups. Every answer shows the line it came from, and Blaze can plan your week. You confirm every change." },
+  { view: "voyage", target: ".blaze-fab", title: "Trojan, the wooden horse", text: "Ask anything about your syllabi, by typing or out loud, and keep asking follow-ups. Every answer shows the line it came from, and Trojan can plan your week. You confirm every change." },
   { target: ".topbar .btn.primary", title: "Take it everywhere", text: "One click exports every deadline, with reminders, to Google, Apple or Outlook calendar." },
 ];
 
