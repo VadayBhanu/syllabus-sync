@@ -6,7 +6,7 @@ Every course hands you a syllabus with fifteen dates buried in it, in a differen
 
 Built solo at HackUTA 2026 (theme: Homer's *Odyssey*).
 
-**Try it:** https://syllabus-sync-gules.vercel.app (full version with Gemini). A static preview without server features is at https://vadaybhanu.github.io/syllabus-sync/.
+**Try it:** https://syllabussync.study (also at https://syllabus-sync-gules.vercel.app), the full version with Gemini. A static preview without server features is at https://vadaybhanu.github.io/syllabus-sync/.
 
 ## What it does
 
@@ -25,8 +25,8 @@ Built solo at HackUTA 2026 (theme: Homer's *Odyssey*).
   - **Siren song:** something due on a day the syllabus says there's no class (usually a typo worth asking about).
   - **Safe harbor:** a holiday week.
 - **Work plan.** Turns deadlines into study sessions spread over the days before each one, within the hours you say you have per day. Overloaded days are flagged. Sessions can be renamed, resized, moved, finished or deleted, and anything you touch stays put when the plan rebalances.
-- **Trojan, the wooden horse.** The Greeks hid soldiers inside a horse; your answers are hiding inside your syllabi. Trojan is a study assistant drawn as a little wooden horse on wheels. Ask anything about your classes in plain English: "how is my grade calculated?", "what's the late policy?", "what should I do this week?", then keep going with follow-ups like "and when is that exam?". Trojan can also act on your schedule: "plan my next 3 days", "move my Exam 3 study session to Monday", "add my ACM meeting Thursday at 6", "export my calendar". Every change shows up as a card you Apply or Skip, so nothing changes without you. Trojan answers only from your syllabi, deadlines and study plan (Gemini, with the conversation as history), shows the exact syllabus line behind each answer, and we check that each quoted line really exists. Without a Gemini key it still answers deadline questions and searches your syllabi.
-- **Mast mode.** Odysseus had himself tied to the mast to sail past the Sirens. This focus timer sails a ship to the next island as you work, and if you switch tabs the Sirens start singing and it counts how many times they got you. Finished sessions are checked off in your plan.
+- **Trojan, the wooden horse.** The Greeks hid soldiers inside a horse; your answers are hiding inside your syllabi. Trojan is a study assistant drawn as a little wooden horse on wheels. Ask anything about your classes in plain English: "how is my grade calculated?", "what's the late policy?", "what should I do this week?", then keep going with follow-ups like "and when is that exam?". Trojan can also act on your schedule: "plan my next 3 days", "move my Exam 3 study session to Monday", "add my ACM meeting Thursday at 6", "export my calendar". Every change shows up as a card you Apply or Skip, so nothing changes without you. Trojan answers only from your syllabi, deadlines and study plan (Gemini, with the conversation as history), shows the exact syllabus line behind each answer, and we check that each quoted line really exists. If Gemini is missing, slow or down, Trojan quietly answers on the device instead (deadlines, grading breakdowns, "plan my next 3 days") and says so. Click the horse and its hatch opens.
+- **Mast mode.** Odysseus had himself tied to the mast to sail past the Sirens. This focus timer sails a ship to the next island as you work, and if you switch tabs the Sirens start singing (an original melody synthesized in the browser, not a recording) and it counts how many times they got you. Finished sessions are checked off in your plan.
 - **The Oracle.** Reads the grade weights from your syllabus and tells you the exact average you need on the rest of the class for an A (or that "even the gods can't get you there"), with a what-if slider.
 - **The Cyclops and the Lotus-eaters.** Your biggest exam ahead gets an eye on the map. Past work you never checked off is flagged, with one click to tick it all off.
 - **Talk to Trojan.** Ask out loud with the mic button and hear answers spoken back (browser speech, no extra keys).
@@ -38,6 +38,12 @@ Built solo at HackUTA 2026 (theme: Homer's *Odyssey*).
   - **Learn with AI, not by AI:** five rules on the page, a "Quiz me" button on every topic that opens Trojan as a quizmaster, and Trojan is told to give hints before answers on roadmap topics.
   - For goals we haven't curated, Gemini drafts the topics, questions and opportunities, and the app attaches search links itself, so you never see a URL a model made up.
   - **About roadmap.sh:** its roadmaps are great, but their licence allows linking, not copying. So every outline here is our own, and each track links to the matching roadmap.sh roadmap ("Full map") for the complete community version, with credit.
+- **Stress test: five messy syllabi.** One button loads five deliberately messy syllabi (a table, plain prose, moved dates, "released" vs "due" lines, stray asterisks). Every deadline shows the exact source line it came from, and old dates of things that were moved are skipped with a note instead of becoming phantom deadlines.
+- **Charybdis, the impossible week.** The workload map flags any week where the planned hours are more than you said you have, and says by how much.
+- **Save my semester.** Tell Trojan "I got sick and lost three days" (or use the button). The planner clears those days and re-plans everything after them, tightest deadline first, keeping exam days and the night before free of other courses' homework and respecting project milestones that depend on each other. You watch the two-week board reshuffle one deadline at a time, then see both futures side by side (keep the old plan vs accept the recovery plan, with how prepared you'd be and which deadlines stay at risk), the reason every task moved, and drafted extension emails for anything due while you were out. Nothing changes until you press Accept. This runs entirely on the device, no AI call.
+- **Star chart (knowledge map).** For a course with a concept map (the sample CSE 3320 concurrency unit), concepts are stars and prerequisites are the lines between them: known, covered, suspect, gap, next and locked. Log a failed quiz and its concepts and recent prerequisites become suspects. A short diagnostic, one question per suspect, confirms the real gap (for example, it was race conditions, not locks) before any practice is assigned, and that practice lands in the work plan before the next exam with free OSTEP chapters linked.
+- **Autopilot dashboard.** Widgets for the week ahead, the next exam, work-plan progress and the semester so far, plus custom trackers you create by asking Trojan ("track my gym sessions 3 times a week", "read 20 pages a day"), with streaks.
+- **AI Builder (developer mode).** Describe a feature and Gemini drafts it as a React component with tests and risks. The app checks the code for anything unsafe (network calls, storage, eval, reaching the parent page) and runs it in a sealed sandboxed iframe on sample data. It never edits the real code or deploys anything: the draft is for a developer to review.
 - **Guided demo.** "Take the 60-second guided demo" loads sample syllabi and walks through every feature.
 - **Calendar, list and countdowns.** Month calendar, a full list with a "needs a look" filter for low-confidence items, and live countdowns to the next deadlines.
 - **Export to any calendar.** RFC 5545 `.ics` with reminders (2 days before exams and projects, 1 day before everything else).
@@ -53,9 +59,10 @@ Built solo at HackUTA 2026 (theme: Homer's *Odyssey*).
 - Re-importing the same course replaces it rather than doubling every deadline. Your manual additions survive.
 - Every extracted item keeps the original line so you can check it in the editor.
 - If Gemini is down, rate-limited, slow or returns junk, the app falls back to the built-in parser and says so.
+- Gemini calls time out and fall back to on-device answers, and the AI Builder falls back to a labelled saved example.
 - Works with no server keys at all. Everything is saved in your browser.
 
-Run the tests with `npm test` (parser formats, year inference, edge cases, AI verification, and the planner).
+Run the tests with `npm test`: 99 tests covering parser formats, year inference, edge cases, AI verification, the planner, the recovery planner, the knowledge map, trackers, the builder's safety checks and Trojan's commands.
 
 ## Running it
 
@@ -69,7 +76,7 @@ Optional environment variables (see `.env.example`):
 
 | Variable | What it enables |
 | --- | --- |
-| `GEMINI_API_KEY` | "Read with Gemini" on upload, and Trojan's full chat mode |
+| `GEMINI_API_KEY` | "Read with Gemini" on upload, Trojan's full chat mode, drafted roadmaps, tutor checks and the AI Builder |
 | `GEMINI_MODEL` | Override the model (default `gemini-3.5-flash`, falling back to other Flash models if one is busy or retired) |
 | `MONGODB_URI` | Cloud sync of courses, deadlines and study sessions |
 | `MONGODB_DB` | Database name (default `syllabus_sync`) |
@@ -80,8 +87,8 @@ Next.js 15 (App Router) and TypeScript, pdf.js for in-browser PDF text, plain CS
 
 ## Sample data
 
-`lib/sample.ts` has two sample syllabi and `public/samples/hist1311-syllabus.pdf` is a sample PDF with a schedule table (generated by `scripts/make-sample-pdf.py`). The course codes look like UTA's, but the instructors, policies and dates are made up.
+`lib/sample.ts` has the guided-demo syllabi plus the five messy stress-test syllabi, and `public/samples/hist1311-syllabus.pdf` is a sample PDF with a schedule table (generated by `scripts/make-sample-pdf.py`). The course codes look like UTA's, but the instructors, policies and dates are made up.
 
 ## How this was built
 
-All code was written during HackUTA 2026 (Nov 14 to 15). I used Claude (Anthropic's AI assistant) as a pair programmer: it wrote much of the code from my product direction and design decisions, and I reviewed, tested and directed changes throughout. The optional extraction feature calls Google's Gemini API at runtime. Open-source libraries used: Next.js, React, pdf.js, the MongoDB Node driver, Vitest.
+All code was written during HackUTA 2026 (Nov 14 to 15). I used Claude (Anthropic's AI assistant) as a pair programmer: it wrote much of the code from my product direction and design decisions, and I reviewed, tested and directed changes throughout. At runtime the app calls Google's Gemini API for optional extraction, Trojan's chat, roadmaps for uncurated goals, tutor feedback and the AI Builder; every one of those has a non-AI fallback. The Siren song is an original melody synthesized in code. Open-source libraries used: Next.js, React, pdf.js, the MongoDB Node driver, Vitest, and (for the builder's sandboxed preview, vendored in `public/builder` with their MIT licences) React 18 UMD and Babel standalone.
