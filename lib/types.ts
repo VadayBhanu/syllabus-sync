@@ -31,6 +31,11 @@ export interface SyllabusEvent {
   source?: string;
   manual?: boolean;
   done?: boolean;
+  /** learning voyages: planned study time, the stage it belongs to, what done means, and where to learn it */
+  minutes?: number;
+  stage?: string;
+  goal?: string;
+  links?: { label: string; url: string }[];
 }
 
 export interface Course {
@@ -42,6 +47,14 @@ export interface Course {
   fileName?: string;
   /** extracted syllabus text, kept so Blaze can answer questions about it */
   text?: string;
+  /** set when this is a self-study roadmap rather than a class */
+  learning?: {
+    roadmap: { label: string; url: string };
+    origin: "curated" | "gemini" | "outline";
+    hoursPerWeek: number;
+    blurb: string;
+    stages: string[];
+  };
 }
 
 export interface ParseReport {

@@ -28,6 +28,7 @@ export interface PlanOptions {
 
 // Rough effort estimates. Exams scale with how much they're worth.
 function effort(e: SyllabusEvent): number {
+  if (e.minutes) return Math.max(30, Math.round(e.minutes / 30) * 30);
   const base: Partial<Record<EventKind, number>> = { exam: 300, project: 360, assignment: 150, lab: 120, quiz: 90 };
   let m = base[e.kind] ?? 0;
   if (e.kind === "exam" && e.weight) m = Math.max(180, Math.min(540, 120 + e.weight * 10));
@@ -39,7 +40,7 @@ function effort(e: SyllabusEvent): number {
 const LEAD: Partial<Record<EventKind, number>> = { exam: 7, project: 10, assignment: 4, lab: 3, quiz: 3 };
 
 function verb(kind: EventKind) {
-  return kind === "exam" || kind === "quiz" ? "Study for" : kind === "project" ? "Work on" : "Do";
+  return kind === "exam" || kind === "quiz" ? "Study for" : kind === "project" ? "Work on" : kind === "reading" ? "Learn" : "Do";
 }
 
 export function buildPlan(
@@ -65,7 +66,8 @@ export function buildPlan(
     if (need <= 0) continue;
 
     // candidate days: from (deadline - lead) up to the day before (or the day itself if it's tomorrow/today)
-    const lead = LEAD[e.kind] ?? 3;
+    // self-study topics have no hard deadline, so give them a wide window and let people run ahead
+    const lead = e.minutes ? 14 : LEAD[e.kind] ?? 3;
     let first = addDays(e.date, -lead);
     if (first < opts.today) first = opts.today;
     let last = addDays(e.date, -1);

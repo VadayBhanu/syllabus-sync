@@ -61,6 +61,10 @@ export default function EventEditor({ event, courses, onSave, onDelete, onClose,
       source: event?.source,
       manual: event ? event.manual : true,
       done: event?.done,
+      minutes: event?.minutes,
+      stage: event?.stage,
+      goal: event?.goal,
+      links: event?.links,
     });
   }
 

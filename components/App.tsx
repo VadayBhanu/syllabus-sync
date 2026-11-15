@@ -24,11 +24,15 @@ import Blaze from "./Blaze";
 import MastMode from "./MastMode";
 import Oracle from "./Oracle";
 import Tour from "./Tour";
+import LearnStart from "./LearnStart";
+import LearnPath from "./LearnPath";
+import { reschedule, trackToCourse } from "@/lib/learn";
+import type { Track } from "@/lib/roadmaps";
 import { applyAction } from "@/lib/actions";
 import { buildPlan, type StudySession } from "@/lib/plan";
 import { ymd } from "@/lib/dates";
 
-type View = "voyage" | "plan" | "oracle" | "calendar" | "list";
+type View = "voyage" | "learn" | "plan" | "oracle" | "calendar" | "list";
 
 interface ImportNote {
   course: string;
@@ -53,6 +57,7 @@ export default function App() {
   const [planOpts, setPlanOpts] = useState({ dailyMinutes: 180, weekends: true });
   const [server, setServer] = useState({ ai: false, sync: false });
   const [useAi, setUseAi] = useState(true);
+  const [mode, setMode] = useState<"syllabus" | "learn">("syllabus");
 
   useEffect(() => {
     fetch("/api/status")
@@ -220,6 +225,26 @@ export default function App() {
     setToast("Loaded two sample syllabi");
   };
 
+  const startLearning = (track: Track, opts: { start: string; hoursPerWeek: number }) => {
+    const cs = coursesRef.current;
+    const { course, events: es } = trackToCourse(track, opts, COURSE_COLORS[cs.length % COURSE_COLORS.length], uid);
+    // a second roadmap for the same goal gets its own code so chips stay distinct
+    if (cs.some((c) => c.code === course.code)) course.code = `${course.code}${cs.filter((c) => c.code.startsWith(course.code)).length + 1}`;
+    const next = [...cs, course];
+    coursesRef.current = next;
+    latest.current = { ...latest.current, courses: next, events: [...latest.current.events, ...es] };
+    setCourses(next);
+    setEvents((prev) => [...prev, ...es]);
+    setView("learn");
+    setToast(`${track.name}: ${es.length} stops charted, one study plan built`);
+  };
+
+  const replanLearning = (courseId: string, hoursPerWeek: number) => {
+    setEvents((es) => reschedule(es, courseId, today, hoursPerWeek));
+    setCourses((cs) => cs.map((c) => (c.id === courseId && c.learning ? { ...c, learning: { ...c.learning, hoursPerWeek } } : c)));
+    setToast("Re-planned the rest of the roadmap from today");
+  };
+
   const upsertEvent = (e: SyllabusEvent) => {
     setEvents((es) => (es.some((x) => x.id === e.id) ? es.map((x) => (x.id === e.id ? e : x)) : [...es, e]));
     setEditing(null);
@@ -300,18 +325,36 @@ export default function App() {
       {!ready ? null : empty ? (
         <section className="hero">
           <div>
-            <h2>Your semester is a voyage. Here is the map.</h2>
+            <h2>{mode === "learn" ? "Learning on your own? Chart the voyage." : "Your semester is a voyage. Here is the map."}</h2>
+            {mode === "learn" ? (
+              <p>
+                Pick a goal like AI or cyber security and SyllabusSync turns it into stages and topics on the voyage map, spreads the
+                study time over your week, gives every topic free, well-known resources, and links the full community roadmap on
+                roadmap.sh. Tick topics off as you go and ask Blaze what to learn next.
+              </p>
+            ) : (
             <p>
               Drop in a syllabus PDF and SyllabusSync pulls out every exam, quiz, project and homework date, puts them on one
               calendar, warns you about the weeks where everything lands at once, and exports it all to Google, Apple or Outlook
               calendar. Your files stay in your browser.
             </p>
+            )}
           </div>
           <div className="stack" style={{ gap: 10 }}>
-          <button className="btn primary" style={{ justifySelf: "start", padding: "10px 18px" }} onClick={() => { loadSamples(); setTouring(true); }}>
-            ▶ Take the 60-second guided demo
-          </button>
-          <Upload onText={importText} onCalendar={importCalendar} onSamples={loadSamples} ai={server.ai} useAi={useAi} setUseAi={setUseAi} />
+          <div className="mode-switch" role="tablist" aria-label="How are you learning?">
+            <button role="tab" aria-selected={mode === "syllabus"} onClick={() => setMode("syllabus")}>I have syllabi</button>
+            <button role="tab" aria-selected={mode === "learn"} onClick={() => setMode("learn")}>I&apos;m learning on my own</button>
+          </div>
+          {mode === "syllabus" ? (
+            <>
+              <button className="btn primary" style={{ justifySelf: "start", padding: "10px 18px" }} onClick={() => { loadSamples(); setTouring(true); }}>
+                ▶ Take the 60-second guided demo
+              </button>
+              <Upload onText={importText} onCalendar={importCalendar} onSamples={loadSamples} ai={server.ai} useAi={useAi} setUseAi={setUseAi} />
+            </>
+          ) : (
+            <LearnStart onStart={startLearning} ai={server.ai} />
+          )}
           </div>
         </section>
       ) : (
@@ -357,9 +400,9 @@ export default function App() {
 
           <div className="row">
             <div className="tabs" role="tablist" aria-label="View">
-              {(["voyage", "plan", "oracle", "calendar", "list"] as View[]).map((v) => (
+              {(["voyage", ...(courses.some((c) => c.learning) ? ["learn"] : []), "plan", "oracle", "calendar", "list"] as View[]).map((v) => (
                 <button key={v} role="tab" className="tab" aria-selected={view === v} onClick={() => setView(v)}>
-                  {v === "voyage" ? "Voyage map" : v === "plan" ? "Work plan" : v === "oracle" ? "The Oracle" : v === "calendar" ? "Calendar" : "All deadlines"}
+                  {v === "voyage" ? "Voyage map" : v === "learn" ? "Learning path" : v === "plan" ? "Work plan" : v === "oracle" ? "The Oracle" : v === "calendar" ? "Calendar" : "All deadlines"}
                 </button>
               ))}
             </div>
@@ -382,6 +425,9 @@ export default function App() {
                   onRebuild={() => rebuild(false)}
                   onFocus={(x) => setFocus({ session: x })}
                 />
+              )}
+              {view === "learn" && (
+                <LearnPath courses={courses.filter((c) => !hidden.has(c.id))} events={events} today={today} onToggle={toggleDone} onOpen={(e) => setEditing(e)} onReschedule={replanLearning} />
               )}
               {view === "oracle" && <Oracle courses={courses} />}
               {view === "calendar" && <CalendarView events={visible} hazards={hazards} courses={courseById} now={now} onOpen={(e) => setEditing(e)} />}
@@ -410,6 +456,7 @@ export default function App() {
                 />
               )}
               <Upload compact onText={importText} onCalendar={importCalendar} onSamples={loadSamples} ai={server.ai} useAi={useAi} setUseAi={setUseAi} />
+              <LearnStart compact onStart={startLearning} ai={server.ai} />
             </aside>
           </div>
         </div>

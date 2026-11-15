@@ -66,7 +66,7 @@ export default function VoyageMap({ events, hazards, courses, now, onOpen, onTog
       const items = events
         .filter((e) => e.date <= end && (e.endDate ?? e.date) >= start)
         .sort((a, b) => (a.date + (a.time ?? "99")).localeCompare(b.date + (b.time ?? "99")));
-      const load = items.reduce((s, e) => s + (e.done ? 0 : LOAD[e.kind] ?? 0), 0);
+      const load = items.reduce((s, e) => s + (e.done ? 0 : (e.minutes ? e.minutes / 180 : LOAD[e.kind] ?? 0)), 0);
       const row = Math.floor(i / PER_ROW);
       const col = i % PER_ROW;
       const x = row % 2 === 0 ? PAD_X + col * step : W - PAD_X - col * step;
@@ -137,7 +137,7 @@ export default function VoyageMap({ events, hazards, courses, now, onOpen, onTog
     return `M${a.x},${a.y} C${a.x + out},${a.y} ${b.x + out},${b.y} ${b.x},${b.y}`;
   });
 
-  const islandR = (w: Week) => (w.items.some((e) => LOAD[e.kind]) ? 13 + Math.min(w.load, 12) * 2.1 : 12);
+  const islandR = (w: Week) => (w.items.some((e) => LOAD[e.kind] || e.minutes) ? 13 + Math.min(w.load, 12) * 2.1 : 12);
   const startR = Math.max(12, islandR(weeks[0]));
   const endR = Math.max(12, islandR(weeks[weeks.length - 1]));
   const cyclops = findCyclops(events, today);
@@ -212,7 +212,7 @@ export default function VoyageMap({ events, hazards, courses, now, onOpen, onTog
 
         {/* islands */}
         {weeks.map((w) => {
-          const graded = w.items.filter((e) => LOAD[e.kind]);
+          const graded = w.items.filter((e) => LOAD[e.kind] || e.minutes);
           const r = graded.length ? 13 + Math.min(w.load, 12) * 2.1 : 0;
           const isSel = w.index === sel;
           const label = `Week ${w.index + 1}, ${prettyDate(w.start, false)}: ${graded.length} graded item${graded.length === 1 ? "" : "s"}${w.hazard ? ", " + w.hazard.epithet : ""}`;

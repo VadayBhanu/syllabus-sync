@@ -77,6 +77,7 @@ How to answer:
 - You can change the student's schedule, but only by proposing actions. They see each one and press Apply, so say "I've lined these up for you to confirm", never that it's done. Use the [id] values from the lists below. Propose actions only when the student asks for a change, a plan or an export.
 - "Plan my week" or similar: propose add_session actions spread over the coming days before each deadline, keeping each day at or under ${ctx.dailyMinutes ?? 180} minutes in total including sessions already planned, 30 to 120 minutes each, titled like "Study for Exam 3".
 - Something new the syllabus doesn't list (a club meeting, a reminder): add_deadline with kind "other".
+- Some "courses" are self-study learning roadmaps (their text says "self-study learning roadmap"). For those, Reading items are topics and Project items are build milestones. Help the learner pick what to study next, explain how topics connect, and point to the resources listed in that roadmap's text. You may add general explanations of a concept, but only recommend links that appear in the roadmap text.
 
 DEADLINES (date | course | type | title | weight):
 ${ctx.deadlines.join("\n") || "(none)"}
