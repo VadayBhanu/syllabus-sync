@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { generate } from "@/lib/gemini";
 
 // Blaze: a study assistant that answers from the student's own syllabi and deadlines.
 // Multi-turn: the browser sends the conversation so far, and we pass it to Gemini as history.
@@ -107,41 +108,25 @@ export async function POST(req: Request) {
   ctx.deadlines = (ctx.deadlines ?? []).slice(0, 400);
   ctx.plan = (ctx.plan ?? []).slice(0, 200);
 
-  const model = process.env.GEMINI_MODEL || "gemini-2.5-flash";
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), 40_000);
+  const r = await generate(key, {
+    systemInstruction: { parts: [{ text: system(ctx) }] },
+    contents: turns.map((t) => ({ role: t.role === "user" ? "user" : "model", parts: [{ text: t.text.slice(0, 4000) }] })),
+    generationConfig: { temperature: 0.3, responseMimeType: "application/json", responseSchema: schema },
+  });
+  if (!r.ok) {
+    const msg = r.timedOut ? "Blaze took too long. Try asking again." : r.status === 429 || r.status === 503 ? "Blaze is getting a lot of questions right now. Try again in a moment." : "Blaze couldn't answer that one.";
+    return NextResponse.json({ error: msg }, { status: 502 });
+  }
   try {
-    const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "x-goog-api-key": key },
-      signal: controller.signal,
-      body: JSON.stringify({
-        systemInstruction: { parts: [{ text: system(ctx) }] },
-        contents: turns.map((t) => ({ role: t.role === "user" ? "user" : "model", parts: [{ text: t.text.slice(0, 4000) }] })),
-        generationConfig: { temperature: 0.3, responseMimeType: "application/json", responseSchema: schema },
-      }),
+    const out = JSON.parse(r.text);
+    return NextResponse.json({
+      answer: String(out.answer ?? "").slice(0, 6000),
+      citations: Array.isArray(out.citations) ? out.citations.slice(0, 6) : [],
+      followUps: Array.isArray(out.followUps) ? out.followUps.slice(0, 3).map(String) : [],
+      actions: Array.isArray(out.actions) ? out.actions.slice(0, 20) : [],
     });
-    if (!res.ok) {
-      console.error("blaze gemini error", res.status, (await res.text()).slice(0, 400));
-      return NextResponse.json({ error: res.status === 429 ? "Blaze is getting a lot of questions right now. Try again in a moment." : "Blaze couldn't answer that one." }, { status: 502 });
-    }
-    const data = await res.json();
-    const raw = data?.candidates?.[0]?.content?.parts?.map((p: { text?: string }) => p.text ?? "").join("") ?? "";
-    try {
-      const out = JSON.parse(raw);
-      return NextResponse.json({
-        answer: String(out.answer ?? "").slice(0, 6000),
-        citations: Array.isArray(out.citations) ? out.citations.slice(0, 6) : [],
-        followUps: Array.isArray(out.followUps) ? out.followUps.slice(0, 3).map(String) : [],
-        actions: Array.isArray(out.actions) ? out.actions.slice(0, 20) : [],
-      });
-    } catch {
-      // model ignored the schema; still show what it said
-      return NextResponse.json({ answer: raw.slice(0, 6000), citations: [], followUps: [] });
-    }
-  } catch (err) {
-    return NextResponse.json({ error: (err as Error)?.name === "AbortError" ? "Blaze took too long. Try asking again." : "Couldn't reach Blaze." }, { status: 504 });
-  } finally {
-    clearTimeout(timer);
+  } catch {
+    // model ignored the schema; still show what it said
+    return NextResponse.json({ answer: r.text.slice(0, 6000), citations: [], followUps: [] });
   }
 }

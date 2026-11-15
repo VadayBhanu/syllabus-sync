@@ -62,7 +62,7 @@ Optional environment variables (see `.env.example`):
 | Variable | What it enables |
 | --- | --- |
 | `GEMINI_API_KEY` | "Read with Gemini" on upload, and Blaze's full chat mode |
-| `GEMINI_MODEL` | Override the model (default `gemini-2.5-flash`) |
+| `GEMINI_MODEL` | Override the model (default `gemini-3.5-flash`, falling back to other Flash models if one is busy or retired) |
 | `MONGODB_URI` | Cloud sync of courses, deadlines and study sessions |
 | `MONGODB_DB` | Database name (default `syllabus_sync`) |
 

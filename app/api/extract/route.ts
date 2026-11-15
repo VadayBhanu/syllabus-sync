@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { generate } from "@/lib/gemini";
 
 // Sends syllabus text to Gemini and asks for structured deadlines, each with the exact
 // line it came from. The browser then verifies those quotes (lib/verify.ts).
@@ -65,38 +66,20 @@ export async function POST(req: Request) {
   if (text.trim().length < 20) return NextResponse.json({ error: "Not enough text to read." }, { status: 400 });
   const today = /^\d{4}-\d{2}-\d{2}$/.test(body.today ?? "") ? body.today! : new Date().toISOString().slice(0, 10);
 
-  const model = process.env.GEMINI_MODEL || "gemini-2.5-flash";
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), 45_000);
-  try {
-    const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "x-goog-api-key": key },
-      signal: controller.signal,
-      body: JSON.stringify({
-        contents: [{ role: "user", parts: [{ text: prompt(text, today) }] }],
-        generationConfig: { temperature: 0, responseMimeType: "application/json", responseSchema: schema },
-      }),
-    });
-    if (!res.ok) {
-      const detail = await res.text();
-      console.error("gemini error", res.status, detail.slice(0, 500));
-      return NextResponse.json({ error: res.status === 429 ? "AI is rate-limited right now. Using the built-in parser." : "AI extraction failed. Using the built-in parser." }, { status: 502 });
-    }
-    const data = await res.json();
-    const raw = data?.candidates?.[0]?.content?.parts?.map((p: { text?: string }) => p.text ?? "").join("") ?? "";
-    let parsed;
-    try {
-      parsed = JSON.parse(raw);
-    } catch {
-      return NextResponse.json({ error: "AI returned something unreadable. Using the built-in parser." }, { status: 502 });
-    }
-    if (!Array.isArray(parsed?.events)) return NextResponse.json({ error: "AI returned no events." }, { status: 502 });
-    return NextResponse.json({ model, result: parsed });
-  } catch (err) {
-    const aborted = (err as Error)?.name === "AbortError";
-    return NextResponse.json({ error: aborted ? "AI took too long. Using the built-in parser." : "Couldn't reach the AI service." }, { status: 504 });
-  } finally {
-    clearTimeout(timer);
+  const r = await generate(key, {
+    contents: [{ role: "user", parts: [{ text: prompt(text, today) }] }],
+    generationConfig: { temperature: 0, responseMimeType: "application/json", responseSchema: schema },
+  });
+  if (!r.ok) {
+    const msg = r.timedOut ? "AI took too long. Using the built-in parser." : r.status === 429 || r.status === 503 ? "AI is busy right now. Using the built-in parser." : "AI extraction failed. Using the built-in parser.";
+    return NextResponse.json({ error: msg }, { status: 502 });
   }
+  let parsed;
+  try {
+    parsed = JSON.parse(r.text);
+  } catch {
+    return NextResponse.json({ error: "AI returned something unreadable. Using the built-in parser." }, { status: 502 });
+  }
+  if (!Array.isArray(parsed?.events)) return NextResponse.json({ error: "AI returned no events." }, { status: 502 });
+  return NextResponse.json({ model: r.model, result: parsed });
 }
