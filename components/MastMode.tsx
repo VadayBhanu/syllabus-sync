@@ -8,6 +8,9 @@ import { useEffect, useRef, useState } from "react";
 import type { StudySession } from "@/lib/plan";
 import { fmtMinutes } from "@/lib/plan";
 import { ymd } from "@/lib/dates";
+import { singSirens, unlockAudio, type SirenSong } from "@/lib/siren";
+
+const SONG_KEY = "syllabus-sync:siren-song";
 
 const LOG_KEY = "syllabus-sync:focus-log";
 
@@ -55,6 +58,42 @@ export default function MastMode({ session, onClose, onComplete }: Props) {
 
   useEffect(() => setLog(loadFocusLog()), []);
 
+  // The Sirens' song: plays while you've wandered off to another tab, stops when you come back.
+  const [songOn, setSongOn] = useState(true);
+  const [preview, setPreview] = useState(false);
+  const song = useRef<SirenSong | null>(null);
+  const hush = () => {
+    song.current?.stop();
+    song.current = null;
+  };
+  useEffect(() => {
+    try {
+      setSongOn(localStorage.getItem(SONG_KEY) !== "off");
+    } catch {}
+    return () => song.current?.stop(0.3);
+  }, []);
+  function toggleSong() {
+    const v = !songOn;
+    setSongOn(v);
+    try {
+      localStorage.setItem(SONG_KEY, v ? "on" : "off");
+    } catch {}
+    if (!v) {
+      hush();
+      setPreview(false);
+    }
+  }
+  function togglePreview() {
+    if (preview) {
+      hush();
+      setPreview(false);
+    } else {
+      hush();
+      song.current = singSirens(0.45);
+      setPreview(true);
+    }
+  }
+
   const running = endsAt !== null && pausedLeft === null && !done;
   const total = length * 60_000;
   const left = done ? 0 : pausedLeft ?? (endsAt ? Math.max(0, endsAt - now) : total);
@@ -73,11 +112,19 @@ export default function MastMode({ session, onClose, onComplete }: Props) {
       if (document.hidden) {
         setSirens((n) => n + 1);
         setLured(true);
+        if (songOn && !song.current) song.current = singSirens(0.5);
+      } else if (!preview) {
+        hush();
       }
     };
     document.addEventListener("visibilitychange", onVis);
     return () => document.removeEventListener("visibilitychange", onVis);
-  }, [running]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [running, songOn, preview]);
+
+  useEffect(() => {
+    if (!running && !preview) hush();
+  }, [running, preview]);
 
   useEffect(() => {
     if (running && left <= 0) finish(length);
@@ -91,6 +138,9 @@ export default function MastMode({ session, onClose, onComplete }: Props) {
   }, [running, onClose]);
 
   function start() {
+    unlockAudio(); // allowed now, during the click, so the Sirens can sing later from a background tab
+    hush();
+    setPreview(false);
     startedAt.current = Date.now();
     setEndsAt(Date.now() + total);
     setNow(Date.now());
@@ -133,7 +183,7 @@ export default function MastMode({ session, onClose, onComplete }: Props) {
           Odysseus had his crew tie him to the mast so he could hear the Sirens without steering into the rocks. Stay on this tab until the timer ends. If you wander off, the Sirens got you.
         </p>
 
-        <MastScene progress={progress} lured={lured && running} />
+        <MastScene progress={progress} lured={(lured && running) || preview} />
 
         <div className="mast-time" aria-live="off">
           {String(mm).padStart(2, "0")}:{String(ss).padStart(2, "0")}
@@ -173,6 +223,17 @@ export default function MastMode({ session, onClose, onComplete }: Props) {
               ))}
             </div>
             <button className="btn primary" onClick={start} style={{ padding: "10px 22px", fontSize: 16 }}>Set sail</button>
+            <div className="row" style={{ gap: 6, justifyContent: "center" }}>
+              <button className="btn small ghost" aria-pressed={songOn} onClick={toggleSong} title="Play the Sirens' song when you leave this tab">
+                {songOn ? "🔊 Siren song on" : "🔈 Siren song off"}
+              </button>
+              {songOn && (
+                <button className="btn small ghost" aria-pressed={preview} onClick={togglePreview}>
+                  {preview ? "■ Stop the Sirens" : "♪ Hear the Sirens"}
+                </button>
+              )}
+            </div>
+            <span className="tiny muted" style={{ textAlign: "center" }}>Leave this tab mid-session and the Sirens start singing. Come back and they fall quiet.</span>
             {weekMinutes > 0 && <span className="tiny muted">{fmtMinutes(weekMinutes)} at the mast this week</span>}
           </div>
         )}
