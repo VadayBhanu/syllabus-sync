@@ -20,7 +20,7 @@ type Link = NonNullable<SyllabusEvent["links"]>[number];
 
 const KIND_ICON: Record<string, string> = { video: "▶", course: "🎓", cert: "🏅", docs: "📘", practice: "🧩", search: "🔎" };
 
-function ResLink({ r }: { r: Link }) {
+export function ResLink({ r }: { r: Link }) {
   return (
     <a href={r.url} target="_blank" rel="noreferrer" className={`res-${r.kind ?? "docs"}`}>
       {r.kind ? <span aria-hidden="true">{KIND_ICON[r.kind]} </span> : null}

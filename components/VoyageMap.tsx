@@ -13,6 +13,11 @@ interface Props {
   now: Date;
   onOpen: (e: SyllabusEvent) => void;
   onToggle: (id: string) => void;
+  /** add a stop in the picked week */
+  onAdd?: (date: string) => void;
+  /** shift a stop by n days */
+  onMove?: (id: string, days: number) => void;
+  mode?: "academic" | "learning" | "project";
 }
 
 // How much each kind of item weighs on a week. Drives island size and how rough the sea gets.
@@ -39,7 +44,7 @@ interface Week {
   y: number;
 }
 
-export default function VoyageMap({ events, hazards, courses, now, onOpen, onToggle }: Props) {
+export default function VoyageMap({ events, hazards, courses, now, onOpen, onToggle, onAdd, onMove, mode = "academic" }: Props) {
   const today = ymd(now);
   const [narrow, setNarrow] = useState(false);
   useLayoutEffect(() => {
@@ -154,7 +159,9 @@ export default function VoyageMap({ events, hazards, courses, now, onOpen, onTog
             ? `Setting sail in ${daysBetween(today, weeks[0].start)} days.`
             : daysLeft === 0
               ? "Home in Ithaca. The semester is done."
-              : `Week ${Math.min(weeks.length, passed + 1)} of ${weeks.length} · ${daysLeft} days to Ithaca · ${examsLeft} exam${examsLeft === 1 ? "" : "s"} still ahead`}
+              : mode === "academic"
+                ? `Week ${Math.min(weeks.length, passed + 1)} of ${weeks.length} · ${daysLeft} days to Ithaca · ${examsLeft} exam${examsLeft === 1 ? "" : "s"} still ahead`
+                : `Week ${Math.min(weeks.length, passed + 1)} of ${weeks.length} · ${daysLeft} days to Ithaca · ${events.filter((e) => !e.done).length} stops still ahead`}
         </span>
       </div>
 
@@ -317,6 +324,7 @@ export default function VoyageMap({ events, hazards, courses, now, onOpen, onTog
             </h3>
             {selWeek.hazard && <span className="badge hz">{selWeek.hazard.epithet}</span>}
             <span className="grow" />
+            {onAdd && <button className="btn small" onClick={() => onAdd(selWeek.start < ymd(now) && addDays(selWeek.start, 6) >= ymd(now) ? ymd(now) : selWeek.start)}>+ Add a stop this week</button>}
             <button className="btn small" disabled={sel <= 0} onClick={() => setSelected(Math.max(0, sel - 1))} aria-label="Previous week">‹</button>
             <button className="btn small" disabled={sel >= weeks.length - 1} onClick={() => setSelected(Math.min(weeks.length - 1, sel + 1))} aria-label="Next week">›</button>
           </div>
@@ -341,7 +349,11 @@ export default function VoyageMap({ events, hazards, courses, now, onOpen, onTog
                       {e.confidence !== "high" && <span className="badge low">check</span>}
                     </div>
                   </div>
-                  <button className="btn small" onClick={() => onOpen(e)}>Edit</button>
+                  <div className="row" style={{ gap: 4, flexWrap: "nowrap" }}>
+                    {onMove && <button className="btn small mv" onClick={() => onMove(e.id, -7)} title="Move a week earlier" aria-label={`Move ${e.title} a week earlier`}>‹ wk</button>}
+                    {onMove && <button className="btn small mv" onClick={() => onMove(e.id, 7)} title="Move a week later" aria-label={`Move ${e.title} a week later`}>wk ›</button>}
+                    <button className="btn small" onClick={() => onOpen(e)}>Edit</button>
+                  </div>
                 </div>
               );
             })

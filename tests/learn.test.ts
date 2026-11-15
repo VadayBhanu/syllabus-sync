@@ -111,3 +111,38 @@ describe("practical, proven learning", () => {
     expect(t?.stages[0].topics[0].check).toBe("Explain a qubit");
   });
 });
+
+import { projectTemplate, studyLinks } from "@/lib/roadmaps";
+import { modeOf } from "@/lib/learn";
+import { applyAction } from "@/lib/actions";
+
+describe("modes, projects and editing the map", () => {
+  it("fits a project's tasks between its start and due date, with no prove-it gate", () => {
+    const t = projectTemplate("Food share app", "Dorms post leftover food");
+    const { course, events } = trackToCourse(t, { start: "2026-11-16", hoursPerWeek: 5, due: "2026-12-28" }, "#000", id);
+    expect(modeOf(course)).toBe("project");
+    expect(course.learning?.due).toBe("2026-12-28");
+    const last = events.reduce((m, e) => (e.date > m ? e.date : m), "");
+    expect(last <= "2026-12-28").toBe(true);
+    expect(last >= "2026-12-14").toBe(true);
+    expect(events.every((e) => !e.check)).toBe(true);
+  });
+
+  it("only builds study links on known platforms", () => {
+    const r = studyLinks([{ platform: "YouTube", search: "StatQuest logistic regression" }, { platform: "evil.example", search: "x" }, { platform: "Coursera", search: "" }]);
+    expect(r).toHaveLength(1);
+    expect(r[0].url).toBe("https://www.youtube.com/results?search_query=StatQuest%20logistic%20regression");
+  });
+
+  it("Blaze can add a topic to a roadmap stage, creating the stage if needed", () => {
+    const { course, events } = trackToCourse(TRACKS[0], { start: "2026-11-16", hoursPerWeek: 8 }, "#000", id);
+    const state = { courses: [course], events, sessions: [], plan: { dailyMinutes: 180, weekends: true } };
+    const r = applyAction(state, { type: "add_deadline", summary: "x", course: "AI", title: "Vector databases", date: "2027-03-20", stage: "LLMs and AI apps", minutes: 180 }, (p) => id(p));
+    const added = r.state!.events.at(-1)!;
+    expect(added.stage).toBe("LLMs and AI apps");
+    expect(added.kind).toBe("reading");
+    expect(added.minutes).toBe(180);
+    const r2 = applyAction(state, { type: "add_deadline", summary: "x", course: "AI", title: "Demo day", date: "2027-04-10", stage: "Showcase" }, (p) => id(p));
+    expect(r2.state!.courses[0].learning?.stages).toContain("Showcase");
+  });
+});

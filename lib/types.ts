@@ -55,6 +55,10 @@ export interface Course {
   learning?: {
     roadmap: { label: string; url: string };
     origin: "curated" | "gemini" | "outline";
+    /** "project" for a personal project plan; learning roadmap otherwise */
+    kind?: "learning" | "project";
+    /** projects: the date it should be done by */
+    due?: string;
     hoursPerWeek: number;
     blurb: string;
     stages: string[];

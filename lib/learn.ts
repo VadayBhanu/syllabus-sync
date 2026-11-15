@@ -3,11 +3,25 @@
 
 import type { Course, SyllabusEvent } from "./types";
 import type { Track } from "./roadmaps";
-import { addDays } from "./dates";
+import { addDays, parseYmd } from "./dates";
 
 export interface LearnOptions {
   start: string;
   hoursPerWeek: number;
+  /** projects: fit the work between start and this date instead of using a fixed pace */
+  due?: string;
+}
+
+export type Mode = "academic" | "learning" | "project";
+
+export function modeOf(c: Course): Mode {
+  return c.learning ? (c.learning.kind === "project" ? "project" : "learning") : "academic";
+}
+
+/** Hours a week needed to finish `minutes` of work between two dates. */
+export function paceFor(minutes: number, start: string, due: string): number {
+  const weeks = Math.max(1, (parseYmd(due).getTime() - parseYmd(start).getTime()) / (7 * 86_400_000));
+  return Math.max(1, Math.ceil(minutes / 60 / weeks));
 }
 
 export const PROJECT_CHECK = "Link to what you built, then explain the hardest decision you made and what you would do differently.";
@@ -28,10 +42,10 @@ function items(track: Track): Item[] {
   const out: Item[] = [];
   for (const st of track.stages) {
     for (const t of st.topics) {
-      out.push({ title: t.title, kind: "reading", confidence: "high", minutes: t.minutes, stage: st.title, goal: t.goal, check: t.check, links: t.resources, manual: true });
+      out.push({ title: t.title, kind: "reading", confidence: "high", minutes: t.minutes, stage: st.title, goal: t.goal, check: t.check || undefined, links: t.resources, manual: true });
     }
     if (st.project)
-      out.push({ title: st.project.title, kind: "project", confidence: "high", minutes: st.project.minutes, stage: st.title, goal: st.project.goal, check: PROJECT_CHECK, manual: true });
+      out.push({ title: st.project.title, kind: "project", confidence: "high", minutes: st.project.minutes, stage: st.title, goal: st.project.goal, check: track.kind === "project" ? undefined : PROJECT_CHECK, manual: true });
   }
   return out;
 }
@@ -49,7 +63,7 @@ export function scheduleItems<T extends { minutes?: number }>(list: T[], start: 
 
 export function courseText(track: Track, hoursPerWeek: number): string {
   const lines = [
-    `${track.name} (self-study learning roadmap, not a class)`,
+    track.kind === "project" ? `${track.name} (personal project plan: milestones and tasks, not a class)` : `${track.name} (self-study learning roadmap, not a class)`,
     `Pace: ${hoursPerWeek} hours per week.`,
     `Outline: ${track.origin === "curated" ? "curated by SyllabusSync" : track.origin === "gemini" ? "drafted by Gemini" : "starter outline"}. Reference roadmap: ${track.roadmap.label} ${track.roadmap.url}`,
     "",
@@ -58,7 +72,7 @@ export function courseText(track: Track, hoursPerWeek: number): string {
     lines.push(`Stage ${i + 1}: ${st.title}`);
     for (const t of st.topics) {
       lines.push(`- Topic: ${t.title} (about ${Math.round(t.minutes / 60)} h). Goal: ${t.goal}`);
-      lines.push(`  Prove-it question: ${t.check}`);
+      if (t.check) lines.push(`  Prove-it question: ${t.check}`);
       for (const r of t.resources) lines.push(`  Resource: ${r.label} ${r.url}`);
     }
     if (st.project) lines.push(`- Project: ${st.project.title} (about ${Math.round(st.project.minutes / 60)} h). Goal: ${st.project.goal}`);
@@ -75,13 +89,15 @@ export function courseText(track: Track, hoursPerWeek: number): string {
 
 export function trackToCourse(track: Track, opts: LearnOptions, color: string, makeId: (p?: string) => string): { course: Course; events: SyllabusEvent[] } {
   const id = makeId("c");
+  const total = track.stages.reduce((t, s) => t + s.topics.reduce((a, x) => a + x.minutes, 0) + (s.project?.minutes ?? 0), 0);
+  if (opts.due && opts.due > opts.start) opts = { ...opts, hoursPerWeek: paceFor(total, opts.start, opts.due) };
   const course: Course = {
     id,
     code: track.code,
     name: track.name,
     color,
     text: courseText(track, opts.hoursPerWeek),
-    learning: { roadmap: track.roadmap, origin: track.origin, hoursPerWeek: opts.hoursPerWeek, blurb: track.blurb, stages: track.stages.map((s) => s.title), stageInfo: track.stages.map((s) => ({ title: s.title, earn: s.earn, certs: s.certs })) },
+    learning: { roadmap: track.roadmap, origin: track.origin, kind: track.kind ?? "learning", due: opts.due, hoursPerWeek: opts.hoursPerWeek, blurb: track.blurb, stages: track.stages.map((s) => s.title), stageInfo: track.stages.map((s) => ({ title: s.title, earn: s.earn, certs: s.certs })) },
   };
   const events = scheduleItems(items(track), opts.start, opts.hoursPerWeek).map((e) => ({ ...e, id: makeId(), courseId: id }) as SyllabusEvent);
   return { course, events };

@@ -5,7 +5,7 @@ import { TRACKS, matchTrack, outlineFor, sanitizeTrack, trackMinutes, type Track
 import { ymd } from "@/lib/dates";
 
 interface Props {
-  onStart: (track: Track, opts: { start: string; hoursPerWeek: number }) => void;
+  onStart: (track: Track, opts: { start: string; hoursPerWeek: number }, note?: string) => void;
   ai?: boolean;
   compact?: boolean;
 }
@@ -26,6 +26,7 @@ export default function LearnStart({ onStart, ai, compact }: Props) {
     const g = goal.trim();
     if (!g) return;
     setNote(null);
+    let fallback: string | undefined;
     const curated = matchTrack(g);
     if (curated && !ai) {
       onStart(curated, { start, hoursPerWeek: hours });
@@ -37,20 +38,20 @@ export default function LearnStart({ onStart, ai, compact }: Props) {
       try {
         const res = await fetch("/api/roadmap", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ goal: g }) });
         const data = await res.json();
-        const t = res.ok ? sanitizeTrack(data.track, g) : null;
+        const t = res.ok ? sanitizeTrack(data.track, g, "learning") : null;
         if (t) {
           onStart(t, { start, hoursPerWeek: hours });
           setGoal("");
           return;
         }
-        setNote(`${data.error ?? "Gemini's roadmap didn't look right."} Used a starter outline instead.`);
+        fallback = `${data.error ?? "Gemini's roadmap didn't look right."} ${curated ? "Showing our curated track instead." : "Used a starter outline instead."}`;
       } catch {
-        setNote("Couldn't reach Gemini. Used a starter outline instead.");
+        fallback = `Couldn't reach Gemini. ${curated ? "Showing our curated track instead." : "Used a starter outline instead."}`;
       } finally {
         setBusy(false);
       }
     }
-    onStart(curated ?? outlineFor(g), { start, hoursPerWeek: hours });
+    onStart(curated ?? outlineFor(g), { start, hoursPerWeek: hours }, fallback);
     setGoal("");
   }
 
@@ -93,7 +94,7 @@ export default function LearnStart({ onStart, ai, compact }: Props) {
           aria-label="What do you want to learn?"
         />
         <button className="btn primary small" disabled={!goal.trim() || busy} onClick={custom}>
-          {busy ? "Drafting with Gemini…" : "Build roadmap"}
+          {busy ? "Drafting with Gemini…" : "Preview roadmap"}
         </button>
       </div>
       {note && <div className="notice" role="status">{note}</div>}

@@ -44,12 +44,33 @@ export function applyAction(s: AppState, a: BlazeAction, makeId: (p: string) => 
         manual: true,
         source: "Added by Blaze",
       };
+      // stops on a roadmap or project plan: keep them in a stage and give them study time
+      if (course.learning) {
+        const stages = course.learning.stages;
+        const stage = a.stage?.trim() && stages.find((x) => x.toLowerCase() === a.stage!.trim().toLowerCase());
+        e.stage = stage || a.stage?.trim().slice(0, 60) || stages[stages.length - 1];
+        e.minutes = a.minutes && a.minutes > 0 ? Math.min(900, Math.round(a.minutes / 30) * 30 || 30) : 120;
+        if (!KINDS.includes(a.kind as EventKind)) e.kind = course.learning.kind === "project" ? "assignment" : "reading";
+        if (e.stage && !stages.includes(e.stage)) {
+          const c2 = { ...course, learning: { ...course.learning, stages: [...stages, e.stage] } };
+          courses = courses.map((c) => (c.id === c2.id ? c2 : c));
+        }
+      }
       return { state: { ...s, courses, events: [...s.events, e] } };
     }
     case "update_deadline": {
       if (!ev) return { error: "That deadline no longer exists." };
       if (a.date && !okDate(a.date)) return { error: "That date isn't valid." };
-      const next: SyllabusEvent = { ...ev, title: a.title?.trim() || ev.title, date: a.date || ev.date, time: a.time === undefined ? ev.time : okTime(a.time) ?? ev.time, confidence: "high", note: undefined };
+      const next: SyllabusEvent = {
+        ...ev,
+        title: a.title?.trim() || ev.title,
+        date: a.date || ev.date,
+        time: a.time === undefined ? ev.time : okTime(a.time) ?? ev.time,
+        stage: a.stage?.trim() ? a.stage.trim().slice(0, 60) : ev.stage,
+        minutes: ev.minutes && a.minutes && a.minutes > 0 ? Math.min(900, a.minutes) : ev.minutes,
+        confidence: "high",
+        note: undefined,
+      };
       return { state: { ...s, events: s.events.map((e) => (e.id === ev.id ? next : e)) } };
     }
     case "remove_deadline":

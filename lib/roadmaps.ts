@@ -59,6 +59,8 @@ export interface Track {
   roadmap: Resource;
   /** where the outline came from, shown to the learner */
   origin: "curated" | "gemini" | "outline";
+  /** a personal project plan rather than a learning roadmap */
+  kind?: "learning" | "project";
   stages: Stage[];
 }
 
@@ -435,6 +437,36 @@ export function matchTrack(goal: string): Track | undefined {
 }
 
 /** Search links always resolve, so they are what we attach to topics nobody has vetted. */
+// Where-to-study suggestions from Gemini come back as a platform plus a search phrase. We only
+// ever build search URLs on these platforms, so a suggestion can't point anywhere unexpected.
+export const STUDY_PLATFORMS: Record<string, (q: string) => string> = {
+  YouTube: (q) => `https://www.youtube.com/results?search_query=${q}`,
+  Coursera: (q) => `https://www.coursera.org/search?query=${q}`,
+  edX: (q) => `https://www.edx.org/search?q=${q}`,
+  "Khan Academy": (q) => `https://www.khanacademy.org/search?page_search_query=${q}`,
+  freeCodeCamp: (q) => `https://www.freecodecamp.org/news/search/?query=${q}`,
+  "MIT OpenCourseWare": (q) => `https://ocw.mit.edu/search/?q=${q}`,
+  Udemy: (q) => `https://www.udemy.com/courses/search/?q=${q}`,
+};
+
+export function studyLinks(raw: unknown): Resource[] {
+  if (!Array.isArray(raw)) return [];
+  const out: Resource[] = [];
+  for (const x of raw.slice(0, 4)) {
+    const platform = String((x as { platform?: string })?.platform ?? "");
+    const search = String((x as { search?: string })?.search ?? "").replace(/\s+/g, " ").trim().slice(0, 80);
+    const make = STUDY_PLATFORMS[platform];
+    if (!make || !search) continue;
+    out.push({
+      label: `${platform}: "${search}"`,
+      url: make(encodeURIComponent(search)),
+      kind: platform === "YouTube" ? "video" : "search",
+      cost: platform === "Udemy" ? "Paid" : platform === "Coursera" || platform === "edX" ? "Free to audit" : "Free",
+    });
+  }
+  return out;
+}
+
 /** A certification someone named but we haven't vetted: link a search, never a guessed URL. */
 export function certSearch(name: string): Resource {
   return { label: `${name} (search)`, url: `https://www.google.com/search?q=${encodeURIComponent(name + " certification official")}`, kind: "cert" };
@@ -489,9 +521,9 @@ export function trackMinutes(t: Track): number {
 }
 
 /** Make sure anything that came back from Gemini has the shape we expect, and only safe links. */
-export function sanitizeTrack(raw: unknown, goal: string): Track | null {
+export function sanitizeTrack(raw: unknown, goal: string, kind: "learning" | "project" = "learning"): Track | null {
   type RawEarn = { canDo?: string; gigs?: string[]; showIt?: string } | null;
-  const r = raw as { name?: string; stages?: { title?: string; topics?: { title?: string; minutes?: number; goal?: string; check?: string }[]; project?: { title?: string; minutes?: number; goal?: string } | null; earn?: RawEarn; certifications?: string[] }[] };
+  const r = raw as { name?: string; stages?: { title?: string; topics?: { title?: string; minutes?: number; goal?: string; check?: string; studyAt?: unknown }[]; project?: { title?: string; minutes?: number; goal?: string } | null; earn?: RawEarn; certifications?: string[] }[] };
   if (!r || !Array.isArray(r.stages)) return null;
   const clamp = (m: unknown, d: number) => Math.round(Math.min(900, Math.max(30, Number(m) || d)) / 30) * 30;
   const clean = goal.trim().slice(0, 60);
@@ -506,8 +538,11 @@ export function sanitizeTrack(raw: unknown, goal: string): Track | null {
           title: String(x.title).slice(0, 90),
           minutes: clamp(x.minutes, 180),
           goal: String(x.goal ?? "").slice(0, 160),
-          check: String(x.check ?? "").slice(0, 300) || `Explain "${String(x.title).slice(0, 90)}" in your own words with one example.`,
-          resources: searchLinks(clean, String(x.title)),
+          check: kind === "project" ? "" : String(x.check ?? "").slice(0, 300) || `Explain "${String(x.title).slice(0, 90)}" in your own words with one example.`,
+          resources: (() => {
+            const study = studyLinks(x.studyAt);
+            return study.length ? study : searchLinks(clean, String(x.title));
+          })(),
         })),
       project: s?.project?.title ? { title: String(s.project.title).slice(0, 90), minutes: clamp(s.project.minutes, 300), goal: String(s.project.goal ?? "").slice(0, 160) } : undefined,
       earn: s?.earn?.canDo
@@ -521,9 +556,42 @@ export function sanitizeTrack(raw: unknown, goal: string): Track | null {
     id: "custom",
     code: codeFor(clean),
     name: String(r.name ?? "").slice(0, 70) || titleCase(clean),
-    blurb: `A roadmap for ${clean}, drafted by Gemini. Check it and edit freely.`,
+    blurb: kind === "project" ? `A project plan for ${clean}, drafted by Gemini. Edit it freely.` : `A roadmap for ${clean}, drafted by Gemini. Check it and edit freely.`,
     roadmap: roadmapFor(clean),
     origin: "gemini",
+    kind,
     stages,
+  };
+}
+
+/** Offline project plan: the milestones almost every student project goes through. */
+export function projectTemplate(name: string, goal: string): Track {
+  const n = name.trim().slice(0, 60) || "My project";
+  const g = goal.trim().slice(0, 160);
+  const t = (title: string, minutes: number, line: string): Topic => ({ title, minutes, goal: line, check: "", resources: searchLinks(g || n, title) });
+  return {
+    id: "project",
+    code: codeFor(n),
+    name: n,
+    blurb: g || "Your project, broken into milestones you can actually finish.",
+    roadmap: roadmapFor(`${n} ${g}`),
+    origin: "outline",
+    kind: "project",
+    stages: [
+      { title: "Scope it", topics: [t("Write the problem and who it's for", 90, "One paragraph a stranger understands"), t("Pick the must-have features (MVP)", 60, "Three features, everything else is later"), t("Research similar tools and choose your stack", 120, "Know what exists and why yours is different")] },
+      { title: "Design", topics: [t("Sketch the screens or the architecture", 180, "A rough picture of how it fits together"), t("Plan the data and split the work into tasks", 120, "A task list you can tick off")] },
+      { title: "Build the core", topics: [t("Build the main feature end to end", 480, "One path works from start to finish"), t("Connect data, storage or APIs", 240, "Real data flows through it")], project: { title: "Working prototype", minutes: 120, goal: "Someone else can use the main feature" } },
+      { title: "Test and polish", topics: [t("Test with three real users", 180, "Watch them use it and write down where they get stuck"), t("Fix the top problems and handle errors", 240, "Nothing crashes on the obvious mistakes")] },
+      {
+        title: "Ship and show it",
+        topics: [t("Deploy it", 120, "A link anyone can open"), t("Write the README and record a 2-minute demo", 180, "Someone gets it without you in the room")],
+        project: { title: "Launch", minutes: 60, goal: "Share it with the people it's for" },
+        earn: {
+          canDo: "Point to a finished, working thing you built, which is what employers and clients ask for.",
+          gigs: ["Offer it to a club, lab or small business that has the problem", "Enter it in a hackathon or showcase", "Use it as the centrepiece of internship applications", "Turn it into a freelance service for similar clients"],
+          showIt: "Live link, GitHub repo, a short demo video, and one line on the result (users, time saved, feedback).",
+        },
+      },
+    ],
   };
 }

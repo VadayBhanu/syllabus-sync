@@ -27,11 +27,13 @@ import Tour from "./Tour";
 import LearnStart from "./LearnStart";
 import LearnPath from "./LearnPath";
 import ProveIt from "./ProveIt";
-import { reschedule, trackToCourse } from "@/lib/learn";
+import ProjectStart from "./ProjectStart";
+import RoadmapPreview from "./RoadmapPreview";
+import { modeOf, reschedule, trackToCourse, type Mode } from "@/lib/learn";
 import type { Track } from "@/lib/roadmaps";
 import { applyAction } from "@/lib/actions";
 import { buildPlan, type StudySession } from "@/lib/plan";
-import { ymd } from "@/lib/dates";
+import { addDays, ymd } from "@/lib/dates";
 
 type View = "voyage" | "learn" | "plan" | "oracle" | "calendar" | "list";
 
@@ -58,7 +60,29 @@ export default function App() {
   const [planOpts, setPlanOpts] = useState({ dailyMinutes: 180, weekends: true });
   const [server, setServer] = useState({ ai: false, sync: false });
   const [useAi, setUseAi] = useState(true);
-  const [mode, setMode] = useState<"syllabus" | "learn">("syllabus");
+  // Academic (syllabi), Self-study (learning roadmaps) or Project. Each keeps its own courses;
+  // switching only changes what's shown, nothing is lost.
+  const [mode, setModeState] = useState<Mode>("academic");
+  const [draft, setDraft] = useState<{ track: Track; opts: { start: string; hoursPerWeek: number; due?: string } } | null>(null);
+  const [newDate, setNewDate] = useState<string | undefined>(undefined);
+  const setMode = (m: Mode) => {
+    setModeState(m);
+    setDraft(null);
+    setView("voyage");
+    try {
+      localStorage.setItem("syllabus-sync:mode", m);
+    } catch {
+      /* fine */
+    }
+  };
+  useEffect(() => {
+    try {
+      const m = localStorage.getItem("syllabus-sync:mode");
+      if (m === "academic" || m === "learning" || m === "project") setModeState(m);
+    } catch {
+      /* fine */
+    }
+  }, []);
 
   useEffect(() => {
     fetch("/api/status")
@@ -132,7 +156,11 @@ export default function App() {
     return () => clearTimeout(t);
   }, [toast]);
 
-  const visible = useMemo(() => events.filter((e) => !hidden.has(e.courseId)), [events, hidden]);
+  const modeCourses = useMemo(() => courses.filter((c) => modeOf(c) === mode), [courses, mode]);
+  const modeIds = useMemo(() => new Set(modeCourses.map((c) => c.id)), [modeCourses]);
+  const modeEvents = useMemo(() => events.filter((e) => modeIds.has(e.courseId)), [events, modeIds]);
+  const modeSessions = useMemo(() => sessions.filter((x) => modeIds.has(x.courseId)), [sessions, modeIds]);
+  const visible = useMemo(() => modeEvents.filter((e) => !hidden.has(e.courseId)), [modeEvents, hidden]);
   const hazards = useMemo(() => findHazards(visible), [visible]);
   const courseById = useMemo(() => new Map(courses.map((c) => [c.id, c])), [courses]);
 
@@ -226,7 +254,7 @@ export default function App() {
     setToast("Loaded two sample syllabi");
   };
 
-  const startLearning = (track: Track, opts: { start: string; hoursPerWeek: number }) => {
+  const startLearning = (track: Track, opts: { start: string; hoursPerWeek: number; due?: string }) => {
     const cs = coursesRef.current;
     const { course, events: es } = trackToCourse(track, opts, COURSE_COLORS[cs.length % COURSE_COLORS.length], uid);
     // a second roadmap for the same goal gets its own code so chips stay distinct
@@ -237,7 +265,8 @@ export default function App() {
     setCourses(next);
     setEvents((prev) => [...prev, ...es]);
     setView("learn");
-    setToast(`${track.name}: ${es.length} stops charted, one study plan built`);
+    setDraft(null);
+    setToast(track.kind === "project" ? `${track.name}: ${es.length} tasks charted up to your deadline` : `${track.name}: ${es.length} stops charted, one study plan built`);
   };
 
   const replanLearning = (courseId: string, hoursPerWeek: number) => {
@@ -296,18 +325,39 @@ export default function App() {
       setTimeout(() => setConfirmRemove((c) => (c === "__all" ? null : c)), 4000);
       return;
     }
-    setCourses([]);
-    setEvents([]);
-    setSessions([]);
+    // only this mode's voyages; the other modes keep theirs
+    setCourses((cs) => cs.filter((c) => !modeIds.has(c.id)));
+    setEvents((es) => es.filter((e) => !modeIds.has(e.courseId)));
+    setSessions((ss) => ss.filter((x) => !modeIds.has(x.courseId)));
     setNotes([]);
     setConfirmRemove(null);
   };
 
+  const moveEvent = (id: string, days: number) =>
+    setEvents((es) => es.map((e) => (e.id === id ? { ...e, date: addDays(e.date, days), endDate: e.endDate ? addDays(e.endDate, days) : undefined, confidence: "high", note: undefined } : e)));
+
   const latest = useRef({ courses, events, sessions, plan: planOpts });
   latest.current = { courses, events, sessions, plan: planOpts };
   const syncState = useMemo(() => ({ courses, events, sessions, plan: planOpts }), [courses, events, sessions, planOpts]);
-  const empty = ready && courses.length === 0;
-  const graded = visible.filter((e) => GRADED.includes(e.kind));
+  const empty = ready && modeCourses.length === 0;
+  const graded = mode === "academic" ? visible.filter((e) => GRADED.includes(e.kind)) : visible.filter((e) => !e.done);
+  const noun = mode === "academic" ? "deadline" : mode === "learning" ? "topic" : "task";
+  const tabs: View[] = mode === "academic" ? ["voyage", "plan", "oracle", "calendar", "list"] : ["voyage", "learn", "plan", "calendar", "list"];
+  const shown: View = tabs.includes(view) ? view : "voyage";
+  const preview = draft && (
+    <RoadmapPreview
+      key={draft.track.name}
+      track={draft.track}
+      hoursPerWeek={draft.opts.due ? undefined : draft.opts.hoursPerWeek}
+      startLabel={draft.track.kind === "project" ? "Put it on the map" : "Set sail"}
+      onStart={(t) => startLearning(t, draft.opts)}
+      onCancel={() => setDraft(null)}
+    />
+  );
+  const onPreview = (track: Track, opts: { start: string; hoursPerWeek: number; due?: string }, note?: string) => {
+    setDraft({ track, opts });
+    if (note) setToast(note);
+  };
 
   return (
     <div className="wrap">
@@ -316,58 +366,72 @@ export default function App() {
           <Logo />
           <div>
             <h1>SyllabusSync</h1>
-            <p>Every deadline in your semester, charted.</p>
+            <p>{mode === "academic" ? "Every deadline in your semester, charted." : mode === "learning" ? "Every topic you want to learn, charted." : "Every milestone of your project, charted."}</p>
           </div>
         </div>
+        {ready && (
+          <div className="mode-bar" role="tablist" aria-label="What are you working on?">
+            <button role="tab" aria-selected={mode === "academic"} onClick={() => setMode("academic")} title="University courses and syllabi">🎓 Academic</button>
+            <button role="tab" aria-selected={mode === "learning"} onClick={() => setMode("learning")} title="Learning on your own with a roadmap">🧭 Self-study</button>
+            <button role="tab" aria-selected={mode === "project"} onClick={() => setMode("project")} title="Building your own project">🛠 Project</button>
+          </div>
+        )}
         {!empty && (
           <div className="row">
-            <button className="btn" onClick={() => setTouring(true)}>Take the tour</button>
+            {mode === "academic" && <button className="btn" onClick={() => setTouring(true)}>Take the tour</button>}
             <button className="btn mast-btn" onClick={() => setFocus({ session: null })} title="Focus timer">⛵ Mast mode</button>
-            <button className="btn" onClick={() => setEditing("new")}>+ Add deadline</button>
+            <button className="btn" onClick={() => { setNewDate(undefined); setEditing("new"); }}>+ Add {noun}</button>
             <button className="btn primary" onClick={exportIcs} disabled={!visible.length}>Export to calendar (.ics)</button>
           </div>
         )}
       </header>
 
       {!ready ? null : empty ? (
+        mode !== "academic" && draft ? (
+          preview
+        ) : (
         <section className="hero">
           <div>
-            <h2>{mode === "learn" ? "Learning on your own? Chart the voyage." : "Your semester is a voyage. Here is the map."}</h2>
-            {mode === "learn" ? (
+            <h2>{mode === "academic" ? "Your semester is a voyage. Here is the map." : mode === "learning" ? "Learning on your own? Chart the voyage." : "Building something? Chart the voyage."}</h2>
+            {mode === "academic" ? (
               <p>
-                Pick a goal like AI or cyber security and SyllabusSync turns it into stages and topics on the voyage map, spreads the
-                study time over your week, gives every topic free, well-known resources, and links the full community roadmap on
-                roadmap.sh. Tick topics off as you go and ask Blaze what to learn next.
+                Drop in a syllabus PDF and SyllabusSync pulls out every exam, quiz, project and homework date, puts them on one
+                calendar, warns you about the weeks where everything lands at once, and exports it all to Google, Apple or Outlook
+                calendar. Your files stay in your browser.
+              </p>
+            ) : mode === "learning" ? (
+              <p>
+                Pick a goal like AI or cyber security and get stages and topics on the voyage map, with where to study each one,
+                certifications, and what each stage lets you do for others. You prove each topic in your own words before it counts,
+                and Blaze quizzes you instead of doing it for you.
               </p>
             ) : (
-            <p>
-              Drop in a syllabus PDF and SyllabusSync pulls out every exam, quiz, project and homework date, puts them on one
-              calendar, warns you about the weeks where everything lands at once, and exports it all to Google, Apple or Outlook
-              calendar. Your files stay in your browser.
-            </p>
+              <p>
+                Describe your project and when it should be done. You get milestones and tasks on the voyage map, fitted to your
+                deadline, with where to learn what each task needs. Edit the map any way you like, or ask Blaze to add stops.
+              </p>
             )}
           </div>
           <div className="stack" style={{ gap: 10 }}>
-          <div className="mode-switch" role="tablist" aria-label="How are you learning?">
-            <button role="tab" aria-selected={mode === "syllabus"} onClick={() => setMode("syllabus")}>I have syllabi</button>
-            <button role="tab" aria-selected={mode === "learn"} onClick={() => setMode("learn")}>I&apos;m learning on my own</button>
-          </div>
-          {mode === "syllabus" ? (
-            <>
-              <button className="btn primary" style={{ justifySelf: "start", padding: "10px 18px" }} onClick={() => { loadSamples(); setTouring(true); }}>
-                ▶ Take the 60-second guided demo
-              </button>
-              <Upload onText={importText} onCalendar={importCalendar} onSamples={loadSamples} ai={server.ai} useAi={useAi} setUseAi={setUseAi} />
-            </>
-          ) : (
-            <LearnStart onStart={startLearning} ai={server.ai} />
-          )}
+            {mode === "academic" ? (
+              <>
+                <button className="btn primary" style={{ justifySelf: "start", padding: "10px 18px" }} onClick={() => { loadSamples(); setTouring(true); }}>
+                  ▶ Take the 60-second guided demo
+                </button>
+                <Upload onText={importText} onCalendar={importCalendar} onSamples={loadSamples} ai={server.ai} useAi={useAi} setUseAi={setUseAi} />
+              </>
+            ) : mode === "learning" ? (
+              <LearnStart onStart={onPreview} ai={server.ai} />
+            ) : (
+              <ProjectStart onPreview={onPreview} ai={server.ai} />
+            )}
           </div>
         </section>
+        )
       ) : (
         <div className="stack">
           <div className="row">
-            {courses.map((c) => (
+            {modeCourses.map((c) => (
               <span key={c.id} className={`chip ${hidden.has(c.id) ? "off" : ""}`}>
                 <button
                   className="btn ghost small"
@@ -392,7 +456,7 @@ export default function App() {
               </span>
             ))}
             <span className="grow" />
-            <button className="btn ghost small" onClick={clearAll}>{confirmRemove === "__all" ? "Click again to clear everything" : "Start over"}</button>
+            <button className="btn ghost small" onClick={clearAll}>{confirmRemove === "__all" ? `Click again to clear ${mode === "academic" ? "all courses" : mode === "learning" ? "all roadmaps" : "all projects"}` : "Start over"}</button>
           </div>
 
           {notes.length > 0 && (
@@ -407,9 +471,9 @@ export default function App() {
 
           <div className="row">
             <div className="tabs" role="tablist" aria-label="View">
-              {(["voyage", ...(courses.some((c) => c.learning) ? ["learn"] : []), "plan", "oracle", "calendar", "list"] as View[]).map((v) => (
-                <button key={v} role="tab" className="tab" aria-selected={view === v} onClick={() => setView(v)}>
-                  {v === "voyage" ? "Voyage map" : v === "learn" ? "Learning path" : v === "plan" ? "Work plan" : v === "oracle" ? "The Oracle" : v === "calendar" ? "Calendar" : "All deadlines"}
+              {tabs.map((v) => (
+                <button key={v} role="tab" className="tab" aria-selected={shown === v} onClick={() => { setDraft(null); setView(v); }}>
+                  {v === "voyage" ? "Voyage map" : v === "learn" ? (mode === "project" ? "Project plan" : "Learning path") : v === "plan" ? "Work plan" : v === "oracle" ? "The Oracle" : v === "calendar" ? "Calendar" : mode === "academic" ? "All deadlines" : `All ${noun}s`}
                 </button>
               ))}
             </div>
@@ -417,10 +481,23 @@ export default function App() {
 
           <div className="split">
             <div>
-              {view === "voyage" && <VoyageMap events={visible} hazards={hazards} courses={courseById} now={now} onOpen={(e) => setEditing(e)} onToggle={toggleDone} />}
-              {view === "plan" && (
+              {draft && preview}
+              {!draft && shown === "voyage" && (
+                <VoyageMap
+                  events={visible}
+                  hazards={hazards}
+                  courses={courseById}
+                  now={now}
+                  mode={mode}
+                  onOpen={(e) => setEditing(e)}
+                  onToggle={toggleDone}
+                  onAdd={(d) => { setNewDate(d); setEditing("new"); }}
+                  onMove={moveEvent}
+                />
+              )}
+              {!draft && shown === "plan" && (
                 <WorkPlan
-                  sessions={sessions.filter((x) => !hidden.has(x.courseId) && !x.removed)}
+                  sessions={modeSessions.filter((x) => !hidden.has(x.courseId) && !x.removed)}
                   events={new Map(visible.map((e) => [e.id, e]))}
                   courses={courseById}
                   today={today}
@@ -433,12 +510,12 @@ export default function App() {
                   onFocus={(x) => setFocus({ session: x })}
                 />
               )}
-              {view === "learn" && (
-                <LearnPath courses={courses.filter((c) => !hidden.has(c.id))} events={events} today={today} onToggle={toggleDone} onOpen={(e) => setEditing(e)} onReschedule={replanLearning} />
+              {!draft && shown === "learn" && (
+                <LearnPath courses={modeCourses.filter((c) => !hidden.has(c.id))} events={modeEvents} today={today} onToggle={toggleDone} onOpen={(e) => setEditing(e)} onReschedule={replanLearning} />
               )}
-              {view === "oracle" && <Oracle courses={courses} />}
-              {view === "calendar" && <CalendarView events={visible} hazards={hazards} courses={courseById} now={now} onOpen={(e) => setEditing(e)} />}
-              {view === "list" && <EventList events={visible} hazards={hazards} courses={courseById} onOpen={(e) => setEditing(e)} onToggle={toggleDone} />}
+              {!draft && shown === "oracle" && <Oracle courses={courses} />}
+              {!draft && shown === "calendar" && <CalendarView events={visible} hazards={hazards} courses={courseById} now={now} onOpen={(e) => setEditing(e)} />}
+              {!draft && shown === "list" && <EventList events={visible} hazards={hazards} courses={courseById} onOpen={(e) => setEditing(e)} onToggle={toggleDone} />}
             </div>
             <aside className="stack">
               <Hazards
@@ -462,8 +539,9 @@ export default function App() {
                   }}
                 />
               )}
-              <Upload compact onText={importText} onCalendar={importCalendar} onSamples={loadSamples} ai={server.ai} useAi={useAi} setUseAi={setUseAi} />
-              <LearnStart compact onStart={startLearning} ai={server.ai} />
+              {mode === "academic" && <Upload compact onText={importText} onCalendar={importCalendar} onSamples={loadSamples} ai={server.ai} useAi={useAi} setUseAi={setUseAi} />}
+              {mode === "learning" && <LearnStart compact onStart={onPreview} ai={server.ai} />}
+              {mode === "project" && <ProjectStart compact onPreview={onPreview} ai={server.ai} />}
             </aside>
           </div>
         </div>
@@ -472,7 +550,10 @@ export default function App() {
       {editing && (
         <EventEditor
           event={editing === "new" ? null : editing}
-          courses={courses}
+          courses={modeCourses}
+          defaultDate={editing === "new" ? newDate : undefined}
+          noun={noun}
+          allowNewCourse={mode === "academic"}
           onSave={upsertEvent}
           onDelete={deleteEvent}
           onClose={() => setEditing(null)}
@@ -492,7 +573,7 @@ export default function App() {
           }}
         />
       )}
-      {touring && !empty && <Tour onView={(v) => setView(v)} onClose={() => setTouring(false)} />}
+      {touring && !empty && mode === "academic" && <Tour onView={(v) => setView(v)} onClose={() => setTouring(false)} />}
       {focus && (
         <MastMode
           session={focus.session}
@@ -510,9 +591,9 @@ export default function App() {
       )}
       {ready && (
         <Blaze
-          courses={courses}
-          events={events}
-          sessions={sessions}
+          courses={modeCourses}
+          events={modeEvents}
+          sessions={modeSessions}
           online={server.ai}
           dailyMinutes={planOpts.dailyMinutes}
           onAction={(a) => {

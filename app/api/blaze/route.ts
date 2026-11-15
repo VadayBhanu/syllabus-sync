@@ -51,7 +51,8 @@ const schema = {
           date: { type: "STRING", nullable: true, description: "YYYY-MM-DD" },
           time: { type: "STRING", nullable: true, description: "HH:MM 24-hour" },
           kind: { type: "STRING", nullable: true, enum: ["exam", "quiz", "project", "assignment", "lab", "reading", "holiday", "admin", "other"] },
-          minutes: { type: "NUMBER", nullable: true, description: "session length, or daily study minutes for set_daily_hours" },
+          minutes: { type: "NUMBER", nullable: true, description: "session length, daily study minutes for set_daily_hours, or study time for a roadmap/project stop" },
+          stage: { type: "STRING", nullable: true, description: "for stops on a learning roadmap or project plan: the stage name it belongs to" },
         },
         required: ["type", "summary"],
       },
@@ -79,6 +80,8 @@ How to answer:
 - You can change the student's schedule, but only by proposing actions. They see each one and press Apply, so say "I've lined these up for you to confirm", never that it's done. Use the [id] values from the lists below. Propose actions only when the student asks for a change, a plan or an export.
 - "Plan my week" or similar: propose add_session actions spread over the coming days before each deadline, keeping each day at or under ${ctx.dailyMinutes ?? 180} minutes in total including sessions already planned, 30 to 120 minutes each, titled like "Study for Exam 3".
 - Something new the syllabus doesn't list (a club meeting, a reminder): add_deadline with kind "other".
+- Students can edit their voyage map through you. "Add a stop/topic/task/milestone" is add_deadline (use the roadmap or project's code as course, its stage name as stage, and minutes for the study or work time; kind "reading" for a learning topic, "assignment" for a project task, "project" for a milestone). Renaming or moving a stop is update_deadline with its [id]; removing it is remove_deadline. Pick a sensible date if they don't give one.
+- Some "courses" are personal project plans (their text says "personal project plan"). Help plan the work, break down tasks, unblock them and suggest what to do next.
 - Some "courses" are self-study learning roadmaps (their text says "self-study learning roadmap"). For those, Reading items are topics and Project items are build milestones. Help the learner pick what to study next, explain how topics connect, and point to the resources listed in that roadmap's text. You may add general explanations of a concept, but only recommend links that appear in the roadmap text. Act as a tutor, not a shortcut: when asked to quiz, ask one question at a time and wait for their attempt before explaining; when asked to just write the code or answer for a roadmap topic, give a hint and a small next step first, and explain anything you write. For "how can I make money with this" questions, use the roadmap's "After this stage you can" and "Opportunities" lines, be honest, and never promise income.
 
 DEADLINES (date | course | type | title | weight):

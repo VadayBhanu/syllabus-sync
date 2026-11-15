@@ -52,7 +52,7 @@ Be encouraging and specific. Do not give away the full answer; point at what to 
   const r = await generate(key, {
     contents: [{ role: "user", parts: [{ text: prompt }] }],
     generationConfig: { temperature: 0.2, responseMimeType: "application/json", responseSchema: schema },
-  }, 35_000);
+  }, 35_000, 25_000, true);
   if (!r.ok) return NextResponse.json({ error: r.status === 429 || r.status === 503 ? "The tutor is busy right now." : "Couldn't check that right now." }, { status: 502 });
   try {
     const out = JSON.parse(r.text);

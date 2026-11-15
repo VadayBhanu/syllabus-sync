@@ -13,15 +13,24 @@ interface Props {
   onDelete: (id: string) => void;
   onClose: () => void;
   onNewCourse: (c: Omit<Course, "color">) => void;
+  /** prefill for a new stop, e.g. the week picked on the map */
+  defaultDate?: string;
+  /** what to call it: "deadline", "topic", "task" */
+  noun?: string;
+  allowNewCourse?: boolean;
 }
 
-export default function EventEditor({ event, courses, onSave, onDelete, onClose, onNewCourse }: Props) {
+export default function EventEditor({ event, courses, onSave, onDelete, onClose, onNewCourse, defaultDate, noun = "deadline", allowNewCourse = true }: Props) {
   const [title, setTitle] = useState(event?.title ?? "");
-  const [date, setDate] = useState(event?.date ?? ymd(new Date()));
+  const [date, setDate] = useState(event?.date ?? defaultDate ?? ymd(new Date()));
   const [endDate, setEndDate] = useState(event?.endDate ?? "");
   const [time, setTime] = useState(event?.time ?? "");
-  const [kind, setKind] = useState<EventKind>(event?.kind ?? "assignment");
   const [courseId, setCourseId] = useState(event?.courseId ?? courses[0]?.id ?? "__new");
+  const course = courses.find((c) => c.id === courseId);
+  const L = course?.learning;
+  const [kind, setKind] = useState<EventKind>(event?.kind ?? (courses[0]?.learning ? (courses[0].learning.kind === "project" ? "assignment" : "reading") : "assignment"));
+  const [stage, setStage] = useState(event?.stage ?? courses[0]?.learning?.stages.at(-1) ?? "");
+  const [minutes, setMinutes] = useState(String(event?.minutes ?? 120));
   const [newCourse, setNewCourse] = useState("");
   const [weight, setWeight] = useState(event?.weight?.toString() ?? "");
   const [error, setError] = useState<string | null>(null);
@@ -61,8 +70,8 @@ export default function EventEditor({ event, courses, onSave, onDelete, onClose,
       source: event?.source,
       manual: event ? event.manual : true,
       done: event?.done,
-      minutes: event?.minutes,
-      stage: event?.stage,
+      minutes: L ? Math.max(15, Math.min(900, Number(minutes) || 120)) : event?.minutes,
+      stage: L ? stage || L.stages.at(-1) : event?.stage,
       goal: event?.goal,
       links: event?.links,
     });
@@ -70,8 +79,8 @@ export default function EventEditor({ event, courses, onSave, onDelete, onClose,
 
   return (
     <div className="scrim" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
-      <form className="panel modal" onSubmit={submit} role="dialog" aria-modal="true" aria-label={event ? "Edit deadline" : "Add deadline"}>
-        <h3 style={{ marginBottom: 12 }}>{event ? "Edit deadline" : "Add a deadline"}</h3>
+      <form className="panel modal" onSubmit={submit} role="dialog" aria-modal="true" aria-label={event ? `Edit ${noun}` : `Add ${noun}`}>
+        <h3 style={{ marginBottom: 12 }}>{event ? `Edit ${noun}` : `Add a ${noun}`}</h3>
         {event?.note && <div className="notice warn small" style={{ marginBottom: 10 }}>Parser note: {event.note}</div>}
         {event?.source && (
           <div className="small muted" style={{ marginBottom: 10 }}>
@@ -106,14 +115,28 @@ export default function EventEditor({ event, courses, onSave, onDelete, onClose,
             <input inputMode="decimal" value={weight} onChange={(e) => setWeight(e.target.value)} placeholder="20" />
           </label>
         </div>
+        {L && (
+          <div className="grid2">
+            <label className="field">
+              Stage
+              <select value={stage} onChange={(e) => setStage(e.target.value)}>
+                {L.stages.map((x) => <option key={x} value={x}>{x}</option>)}
+              </select>
+            </label>
+            <label className="field">
+              Time it needs (minutes)
+              <input inputMode="numeric" value={minutes} onChange={(e) => setMinutes(e.target.value)} />
+            </label>
+          </div>
+        )}
         <div className="grid2">
           <label className="field">
-            Course
+            {L ? (L.kind === "project" ? "Project" : "Roadmap") : "Course"}
             <select value={courseId} onChange={(e) => setCourseId(e.target.value)}>
               {courses.map((c) => (
                 <option key={c.id} value={c.id}>{c.code}</option>
               ))}
-              <option value="__new">New course…</option>
+              {allowNewCourse && <option value="__new">New course…</option>}
             </select>
           </label>
           {courseId === "__new" ? (

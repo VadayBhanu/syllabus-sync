@@ -37,6 +37,8 @@ export interface BlazeAction {
   time?: string;
   kind?: string;
   minutes?: number;
+  /** learning/project stops: which stage they belong to */
+  stage?: string;
   status?: "pending" | "applied" | "skipped" | "failed";
   error?: string;
 }
