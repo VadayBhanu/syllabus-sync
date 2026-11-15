@@ -12,7 +12,7 @@ export interface GeminiResult {
   timedOut?: boolean;
 }
 
-export async function generate(key: string, body: unknown, totalMs = 45_000): Promise<GeminiResult> {
+export async function generate(key: string, body: unknown, totalMs = 45_000, perTryMs = 25_000): Promise<GeminiResult> {
   const models = [...new Set([process.env.GEMINI_MODEL, ...FALLBACKS].filter(Boolean) as string[])];
   const deadline = Date.now() + totalMs;
   let last: GeminiResult = { ok: false, status: 502, text: "" };
@@ -21,7 +21,7 @@ export async function generate(key: string, body: unknown, totalMs = 45_000): Pr
     if (left < 3000) break;
     const controller = new AbortController();
     // don't let one slow model eat the whole budget
-    const timer = setTimeout(() => controller.abort(), Math.min(left, 25_000));
+    const timer = setTimeout(() => controller.abort(), Math.min(left, perTryMs));
     try {
       const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, {
         method: "POST",

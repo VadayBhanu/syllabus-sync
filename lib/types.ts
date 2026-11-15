@@ -35,7 +35,11 @@ export interface SyllabusEvent {
   minutes?: number;
   stage?: string;
   goal?: string;
-  links?: { label: string; url: string }[];
+  links?: { label: string; url: string; kind?: string; cost?: string }[];
+  /** the explain-it-back question for a learning topic */
+  check?: string;
+  /** how the learner proved it before ticking it off */
+  proof?: { answer: string; verdict: "pass" | "self"; feedback?: string; at: string };
 }
 
 export interface Course {
@@ -54,6 +58,12 @@ export interface Course {
     hoursPerWeek: number;
     blurb: string;
     stages: string[];
+    /** per stage: what it lets you do for others, and certifications that fit */
+    stageInfo?: {
+      title: string;
+      earn?: { canDo: string; gigs: string[]; showIt: string };
+      certs?: { label: string; url: string; kind?: string; cost?: string }[];
+    }[];
   };
 }
 

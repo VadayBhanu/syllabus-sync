@@ -26,6 +26,7 @@ import Oracle from "./Oracle";
 import Tour from "./Tour";
 import LearnStart from "./LearnStart";
 import LearnPath from "./LearnPath";
+import ProveIt from "./ProveIt";
 import { reschedule, trackToCourse } from "@/lib/learn";
 import type { Track } from "@/lib/roadmaps";
 import { applyAction } from "@/lib/actions";
@@ -255,7 +256,13 @@ export default function App() {
     setEditing(null);
   };
 
-  const toggleDone = (id: string) => setEvents((es) => es.map((e) => (e.id === id ? { ...e, done: !e.done } : e)));
+  // Learning topics have to be explained back before they count as done.
+  const [proving, setProving] = useState<SyllabusEvent | null>(null);
+  const toggleDone = (id: string) => {
+    const ev = events.find((e) => e.id === id);
+    if (ev && !ev.done && ev.check) return setProving(ev);
+    setEvents((es) => es.map((e) => (e.id === id ? { ...e, done: !e.done, proof: e.done ? undefined : e.proof } : e)));
+  };
 
   const removeCourse = (id: string) => {
     if (confirmRemove !== id) {
@@ -473,6 +480,18 @@ export default function App() {
         />
       )}
       {toast && <div className="toast" role="status">{toast}</div>}
+      {proving && (
+        <ProveIt
+          event={proving}
+          ai={server.ai}
+          onClose={() => setProving(null)}
+          onPass={(proof) => {
+            setEvents((es) => es.map((e) => (e.id === proving.id ? { ...e, done: true, proof } : e)));
+            setProving(null);
+            setToast(proof.verdict === "pass" ? `Proved it: ${proving.title}` : `Ticked off: ${proving.title}`);
+          }}
+        />
+      )}
       {touring && !empty && <Tour onView={(v) => setView(v)} onClose={() => setTouring(false)} />}
       {focus && (
         <MastMode

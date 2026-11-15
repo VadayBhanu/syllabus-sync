@@ -58,7 +58,7 @@ export default function LearnStart({ onStart, ai, compact }: Props) {
     <div className={compact ? "panel stack" : "stack"} style={{ gap: 10 }} data-tour="learn">
       {compact ? <h3 style={{ fontSize: 17 }}>Learn a skill</h3> : null}
       <p className="small muted" style={{ margin: 0 }}>
-        No syllabus? Pick what you want to learn and get a staged roadmap on the same voyage map, with a study plan, free resources for every topic, and Blaze to ask about it.
+        No syllabus? Pick what you want to learn and get a staged roadmap on the same voyage map: videos, courses and certifications for every stage, what each stage lets you earn or build, and a quick "prove it" check so you actually understand it instead of just clicking through.
       </p>
       <div className="row small" style={{ gap: 8 }}>
         <label className="row" style={{ gap: 6 }}>
@@ -78,7 +78,7 @@ export default function LearnStart({ onStart, ai, compact }: Props) {
             <b>{t.name}</b>
             {!compact && <span className="small muted">{t.blurb}</span>}
             <span className="tiny muted">
-              {t.stages.length} stages · {t.stages.reduce((s, x) => s + x.topics.length, 0)} topics · about {weeks(t)} weeks at {hours} h/week
+              {t.stages.length} stages · {t.stages.reduce((s, x) => s + x.topics.length, 0)} topics · {t.stages.reduce((s, x) => s + (x.certs?.length ?? 0), 0)} certifications · about {weeks(t)} weeks at {hours} h/week
             </span>
           </button>
         ))}

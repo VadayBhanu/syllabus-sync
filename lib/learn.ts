@@ -10,15 +10,28 @@ export interface LearnOptions {
   hoursPerWeek: number;
 }
 
+export const PROJECT_CHECK = "Link to what you built, then explain the hardest decision you made and what you would do differently.";
+
+/** Offline checks on an explain-it-back answer. Returns a problem to show, or null if it can be accepted. */
+export function selfCheck(answer: string, opts: { pastedChars: number; isProject: boolean; link?: string }): string | null {
+  const words = answer.trim().split(/\s+/).filter(Boolean).length;
+  if (opts.isProject && !/^https?:\/\/\S+\.\S+/.test((opts.link ?? "").trim())) return "Add a link to your project (GitHub, a live demo, a notebook) so it counts.";
+  const min = opts.isProject ? 15 : 30;
+  if (words < min) return `Write at least ${min} words. Explaining it fully is what makes it stick.`;
+  if (opts.pastedChars > answer.length * 0.5) return "Most of this was pasted. Write it in your own words; that is the whole point of the check.";
+  return null;
+}
+
 type Item = Omit<SyllabusEvent, "id" | "courseId" | "date">;
 
 function items(track: Track): Item[] {
   const out: Item[] = [];
   for (const st of track.stages) {
     for (const t of st.topics) {
-      out.push({ title: t.title, kind: "reading", confidence: "high", minutes: t.minutes, stage: st.title, goal: t.goal, links: t.resources, manual: true });
+      out.push({ title: t.title, kind: "reading", confidence: "high", minutes: t.minutes, stage: st.title, goal: t.goal, check: t.check, links: t.resources, manual: true });
     }
-    if (st.project) out.push({ title: st.project.title, kind: "project", confidence: "high", minutes: st.project.minutes, stage: st.title, goal: st.project.goal, manual: true });
+    if (st.project)
+      out.push({ title: st.project.title, kind: "project", confidence: "high", minutes: st.project.minutes, stage: st.title, goal: st.project.goal, check: PROJECT_CHECK, manual: true });
   }
   return out;
 }
@@ -45,9 +58,16 @@ export function courseText(track: Track, hoursPerWeek: number): string {
     lines.push(`Stage ${i + 1}: ${st.title}`);
     for (const t of st.topics) {
       lines.push(`- Topic: ${t.title} (about ${Math.round(t.minutes / 60)} h). Goal: ${t.goal}`);
+      lines.push(`  Prove-it question: ${t.check}`);
       for (const r of t.resources) lines.push(`  Resource: ${r.label} ${r.url}`);
     }
     if (st.project) lines.push(`- Project: ${st.project.title} (about ${Math.round(st.project.minutes / 60)} h). Goal: ${st.project.goal}`);
+    if (st.earn) {
+      lines.push(`  After this stage you can: ${st.earn.canDo}`);
+      lines.push(`  Opportunities it opens (not guaranteed): ${st.earn.gigs.join("; ")}`);
+      lines.push(`  How to show it: ${st.earn.showIt}`);
+    }
+    for (const c of st.certs ?? []) lines.push(`  Certification: ${c.label}${c.cost ? " (" + c.cost + ")" : ""} ${c.url}`);
     lines.push("");
   });
   return lines.join("\n");
@@ -61,7 +81,7 @@ export function trackToCourse(track: Track, opts: LearnOptions, color: string, m
     name: track.name,
     color,
     text: courseText(track, opts.hoursPerWeek),
-    learning: { roadmap: track.roadmap, origin: track.origin, hoursPerWeek: opts.hoursPerWeek, blurb: track.blurb, stages: track.stages.map((s) => s.title) },
+    learning: { roadmap: track.roadmap, origin: track.origin, hoursPerWeek: opts.hoursPerWeek, blurb: track.blurb, stages: track.stages.map((s) => s.title), stageInfo: track.stages.map((s) => ({ title: s.title, earn: s.earn, certs: s.certs })) },
   };
   const events = scheduleItems(items(track), opts.start, opts.hoursPerWeek).map((e) => ({ ...e, id: makeId(), courseId: id }) as SyllabusEvent);
   return { course, events };

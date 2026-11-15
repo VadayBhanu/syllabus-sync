@@ -6,6 +6,7 @@ import { generate } from "@/lib/gemini";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
+export const maxDuration = 60;
 
 const MAX_CHARS = 60_000;
 

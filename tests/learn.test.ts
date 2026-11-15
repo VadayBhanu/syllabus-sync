@@ -73,3 +73,41 @@ describe("learning schedule", () => {
     expect(moved[0].date).toBe(events[0].date);
   });
 });
+
+import { selfCheck, PROJECT_CHECK } from "@/lib/learn";
+
+describe("practical, proven learning", () => {
+  it("every curated topic has a prove-it question and every stage says how to put it to work", () => {
+    for (const t of TRACKS) for (const s of t.stages) {
+      expect(s.earn?.gigs.length).toBeGreaterThan(0);
+      for (const x of s.topics) expect(x.check.length).toBeGreaterThan(20);
+      for (const c of s.certs ?? []) {
+        expect(c.kind).toBe("cert");
+        expect(c.cost).toBeTruthy();
+        expect(c.url).toMatch(/^https:\/\//);
+      }
+    }
+  });
+
+  it("every curated resource is marked free or paid", () => {
+    for (const t of TRACKS) for (const s of t.stages) for (const x of s.topics) for (const r of x.resources) expect(r.cost).toBeTruthy();
+  });
+
+  it("refuses short or pasted explanations, and projects need a link", () => {
+    const long = "word ".repeat(40);
+    expect(selfCheck("too short", { pastedChars: 0, isProject: false })).toMatch(/at least 30/);
+    expect(selfCheck(long, { pastedChars: long.length, isProject: false })).toMatch(/own words/);
+    expect(selfCheck(long, { pastedChars: 0, isProject: false })).toBeNull();
+    expect(selfCheck(long, { pastedChars: 0, isProject: true, link: "" })).toMatch(/link/);
+    expect(selfCheck(long, { pastedChars: 0, isProject: true, link: "https://github.com/me/x" })).toBeNull();
+  });
+
+  it("projects carry the project check and Gemini certifications become searches, not guessed URLs", () => {
+    const { events } = trackToCourse(TRACKS[0], { start: "2026-11-16", hoursPerWeek: 8 }, "#000", id);
+    expect(events.find((e) => e.kind === "project")?.check).toBe(PROJECT_CHECK);
+    const t = sanitizeTrack({ name: "Q", stages: [{ title: "A", topics: [{ title: "Qubits", minutes: 60, goal: "g", check: "Explain a qubit" }], earn: { canDo: "x", gigs: ["tutoring"], showIt: "y" }, certifications: ["IBM Quantum Developer"] }] }, "quantum");
+    expect(t?.stages[0].certs?.[0].url).toContain("google.com/search");
+    expect(t?.stages[0].earn?.gigs).toEqual(["tutoring"]);
+    expect(t?.stages[0].topics[0].check).toBe("Explain a qubit");
+  });
+});

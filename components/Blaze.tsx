@@ -90,6 +90,19 @@ export default function Blaze({ courses, events, sessions, online, dailyMinutes,
     return () => window.removeEventListener("keydown", onKey);
   }, [open]);
 
+  // Other parts of the app (e.g. "Quiz me" on a learning topic) can open Blaze with a question.
+  const askRef = useRef<(q: string) => void>(() => {});
+  useEffect(() => {
+    const onAsk = (e: Event) => {
+      const q = (e as CustomEvent<string>).detail;
+      if (typeof q !== "string" || !q.trim()) return;
+      setOpen(true);
+      setTimeout(() => askRef.current(q), 50);
+    };
+    window.addEventListener("blaze:ask", onAsk);
+    return () => window.removeEventListener("blaze:ask", onAsk);
+  }, []);
+
   async function ask(q: string) {
     const question = q.trim();
     if (!question || busy) return;
@@ -149,6 +162,7 @@ export default function Blaze({ courses, events, sessions, online, dailyMinutes,
     );
   }
 
+  askRef.current = ask;
   return (
     <>
       {!open && (
