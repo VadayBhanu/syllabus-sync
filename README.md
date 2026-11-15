@@ -6,6 +6,8 @@ Every course hands you a syllabus with fifteen dates buried in it, in a differen
 
 Built solo at HackUTA 2026 (theme: Homer's *Odyssey*).
 
+**Try it:** https://syllabus-sync-gules.vercel.app (full version with Gemini). A static preview without server features is at https://vadaybhanu.github.io/syllabus-sync/.
+
 ## What it does
 
 - **Bring your syllabus in any way you have it.**
