@@ -33,6 +33,8 @@ import { modeOf, reschedule, trackToCourse, type Mode } from "@/lib/learn";
 import type { Track } from "@/lib/roadmaps";
 import { applyAction } from "@/lib/actions";
 import { mergeLinks, sourcesFor } from "@/lib/catalog";
+import type { UiCommand } from "@/lib/commands";
+import { fmtMinutes } from "@/lib/plan";
 import { buildPlan, type StudySession } from "@/lib/plan";
 import { addDays, ymd } from "@/lib/dates";
 
@@ -66,6 +68,27 @@ export default function App() {
   const [mode, setModeState] = useState<Mode>("academic");
   const [draft, setDraft] = useState<{ track: Track; opts: { start: string; hoursPerWeek: number; due?: string } } | null>(null);
   const [newDate, setNewDate] = useState<string | undefined>(undefined);
+  const [theme, setThemeState] = useState<"system" | "dark" | "light">("system");
+  const setTheme = (t: "system" | "dark" | "light") => {
+    setThemeState(t);
+    try {
+      localStorage.setItem("syllabus-sync:theme", t);
+    } catch {
+      /* fine */
+    }
+  };
+  useEffect(() => {
+    try {
+      const t = localStorage.getItem("syllabus-sync:theme");
+      if (t === "dark" || t === "light") setThemeState(t);
+    } catch {
+      /* fine */
+    }
+  }, []);
+  useEffect(() => {
+    if (theme === "system") delete document.documentElement.dataset.theme;
+    else document.documentElement.dataset.theme = theme;
+  }, [theme]);
   const setMode = (m: Mode) => {
     setModeState(m);
     setDraft(null);
@@ -344,6 +367,67 @@ export default function App() {
     setToast(direct ? `${direct} direct source${direct > 1 ? "s" : ""} added to ${ev.title}` : `Added searches for ${ev.title}. Ask Blaze for a sharper search.`);
   };
 
+  // Everything Blaze can do to the app itself. Returns what Blaze says back.
+  const runCommand = (c: UiCommand): string => {
+    const VIEW_NAME = { voyage: "the voyage map", learn: mode === "project" ? "the project plan" : "the learning path", plan: "your work plan", oracle: "the Oracle", calendar: "the calendar", list: `all your ${noun}s` };
+    switch (c.type) {
+      case "theme":
+        setTheme(c.value);
+        return c.value === "system" ? "Following your system theme again." : `Switched to ${c.value} mode.`;
+      case "mode":
+        setMode(c.value);
+        return `Switched to ${c.value === "academic" ? "Academic" : c.value === "learning" ? "Self-study" : "Project"} mode.`;
+      case "view":
+        if (c.value === "oracle" && mode !== "academic") {
+          setMode("academic");
+          setView("oracle");
+          return "The Oracle reads grade weights from syllabi, so I switched to Academic mode and opened it.";
+        }
+        if (c.value === "learn" && mode === "academic") return "The learning path lives in Self-study or Project mode. Say \"switch to self-study\" first.";
+        setDraft(null);
+        setView(c.value);
+        return `Opened ${VIEW_NAME[c.value]}.`;
+      case "mast": {
+        const next = modeSessions.filter((x) => x.date === today && !x.done && !x.removed)[0] ?? null;
+        setFocus({ session: next });
+        return next ? `Mast mode is on for "${next.label}". Stay on this tab and the Sirens can't get you.` : "Mast mode is on. Stay on this tab and the Sirens can't get you.";
+      }
+      case "tour":
+        if (mode !== "academic") setMode("academic");
+        if (!courses.some((x) => modeOf(x) === "academic")) loadSamples();
+        setTouring(true);
+        return "Starting the guided tour.";
+      case "export":
+        if (!visible.length) return "There's nothing on the map to export yet.";
+        exportIcs();
+        return `Exported ${visible.length} items to a calendar file. Open it to add them to Google, Apple or Outlook.`;
+      case "course": {
+        const target = courses.find((x) => x.code === c.course);
+        if (!target) return `I couldn't find ${c.course}.`;
+        setHidden((h) => {
+          const n = new Set(h);
+          if (c.value === "hide") n.add(target.id);
+          else n.delete(target.id);
+          return n;
+        });
+        return `${c.value === "hide" ? "Hid" : "Showing"} ${target.code}.`;
+      }
+      case "plan_today": {
+        rebuild();
+        setDraft(null);
+        setView("plan");
+        const list = modeSessions.filter((x) => x.date === today && !x.removed && !hidden.has(x.courseId));
+        if (!list.length) {
+          const next = modeSessions.filter((x) => x.date > today && !x.removed && !x.done).sort((a, b) => a.date.localeCompare(b.date))[0];
+          return `Nothing is planned for today. I opened your work plan${next ? `; the next session is "${next.label}" on ${next.date}` : ""}.`;
+        }
+        const total = list.filter((x) => !x.done).reduce((t, x) => t + x.minutes, 0);
+        const code = (id: string) => courses.find((x) => x.id === id)?.code ?? "";
+        return `Here's today (${fmtMinutes(total)} left), and your work plan is open:\n${list.map((x) => `• ${x.done ? "✓ " : ""}${x.label} (${code(x.courseId)}, ${fmtMinutes(x.minutes)})`).join("\n")}\nSay "start mast mode" when you're ready.`;
+      }
+    }
+  };
+
   const moveEvent = (id: string, days: number) =>
     setEvents((es) => es.map((e) => (e.id === id ? { ...e, date: addDays(e.date, days), endDate: e.endDate ? addDays(e.endDate, days) : undefined, confidence: "high", note: undefined } : e)));
 
@@ -380,6 +464,16 @@ export default function App() {
             <p>{mode === "academic" ? "Every deadline in your semester, charted." : mode === "learning" ? "Every topic you want to learn, charted." : "Every milestone of your project, charted."}</p>
           </div>
         </div>
+        {ready && (
+          <button
+            className="btn theme-btn"
+            onClick={() => setTheme((theme === "system" ? (window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light") : theme) === "dark" ? "light" : "dark")}
+            title="Switch light or dark theme (or ask Blaze: dark mode)"
+            aria-label="Switch light or dark theme"
+          >
+            {theme === "dark" ? "☀️" : theme === "light" ? "🌙" : "◐"}
+          </button>
+        )}
         {ready && (
           <div className="mode-bar" role="tablist" aria-label="What are you working on?">
             <button role="tab" aria-selected={mode === "academic"} onClick={() => setMode("academic")} title="University courses and syllabi">🎓 Academic</button>
@@ -608,6 +702,7 @@ export default function App() {
           sessions={modeSessions}
           online={server.ai}
           dailyMinutes={planOpts.dailyMinutes}
+          onCommand={runCommand}
           onAction={(a) => {
             if (a.type === "export_calendar") {
               exportIcs();

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { generate } from "@/lib/gemini";
+import { UI_COMMANDS } from "@/lib/commands";
 
 // Blaze: a study assistant that answers from the student's own syllabi and deadlines.
 // Multi-turn: the browser sends the conversation so far, and we pass it to Gemini as history.
@@ -43,7 +44,7 @@ const schema = {
       items: {
         type: "OBJECT",
         properties: {
-          type: { type: "STRING", enum: ["add_deadline", "update_deadline", "remove_deadline", "attach_sources", "mark_done", "add_session", "move_session", "remove_session", "set_daily_hours", "rebalance_plan", "export_calendar"] },
+          type: { type: "STRING", enum: ["add_deadline", "update_deadline", "remove_deadline", "attach_sources", "ui", "mark_done", "add_session", "move_session", "remove_session", "set_daily_hours", "rebalance_plan", "export_calendar"] },
           summary: { type: "STRING", description: "one short line the student will see, e.g. 'Move Study for Exam 3 to Mon, Nov 16'" },
           id: { type: "STRING", nullable: true, description: "the [id] of the deadline or session this changes; for add_session, the deadline id it prepares for" },
           course: { type: "STRING", nullable: true, description: "course code for add_deadline" },
@@ -52,6 +53,7 @@ const schema = {
           time: { type: "STRING", nullable: true, description: "HH:MM 24-hour" },
           kind: { type: "STRING", nullable: true, enum: ["exam", "quiz", "project", "assignment", "lab", "reading", "holiday", "admin", "other"] },
           minutes: { type: "NUMBER", nullable: true, description: "session length, daily study minutes for set_daily_hours, or study time for a roadmap/project stop" },
+          command: { type: "STRING", nullable: true, enum: UI_COMMANDS, description: "for type ui only" },
           stage: { type: "STRING", nullable: true, description: "for stops on a learning roadmap or project plan: the stage name it belongs to" },
         },
         required: ["type", "summary"],
@@ -80,6 +82,7 @@ How to answer:
 - You can change the student's schedule, but only by proposing actions. They see each one and press Apply, so say "I've lined these up for you to confirm", never that it's done. Use the [id] values from the lists below. Propose actions only when the student asks for a change, a plan or an export.
 - "Plan my week" or similar: propose add_session actions spread over the coming days before each deadline, keeping each day at or under ${ctx.dailyMinutes ?? 180} minutes in total including sessions already planned, 30 to 120 minutes each, titled like "Study for Exam 3".
 - Something new the syllabus doesn't list (a club meeting, a reminder): add_deadline with kind "other".
+- You can also drive the app itself. For dark or light theme, opening a tab (voyage map, learning path or project plan, work plan, Oracle, calendar, list), switching between Academic, Self-study and Project mode, starting Mast mode, starting the guided tour, exporting the calendar, or preparing today's schedule, add an action of type "ui" with the matching command. These run straight away without a confirmation card, so say it's done ("Switched to dark mode."). Data changes (deadlines, sessions, sources) still go through Apply.
 - App vocabulary (students may misspell these; read "dhips log" as ship's log, "orcale" as Oracle, and so on): the Voyage map is the route of weekly islands; the Ship's log is the voyage map's panel that lists each week's stops; a stop is any deadline, topic or task on the map; Blaze is you; Mast mode is the focus timer; The Oracle is the grade calculator; the Work plan is the study sessions; the Learning path and Project plan list stages; Scylla & Charybdis, Storm, Siren song, Cyclops and Lotus-eaters are warnings.
 - "Where can I study X", "add sources/links", or "add that to the ship's log" about a stop: propose attach_sources with that stop's [id] (one action per stop) and put a short, specific search phrase in title (e.g. "HubSpot Academy marketing funnel"). The app attaches trusted direct links and searches itself, so never write URLs in your answer. If the stop doesn't exist yet, propose add_deadline first.
 - Students can edit their voyage map through you. "Add a stop/topic/task/milestone" is add_deadline (use the roadmap or project's code as course, its stage name as stage, and minutes for the study or work time; kind "reading" for a learning topic, "assignment" for a project task, "project" for a milestone). Renaming or moving a stop is update_deadline with its [id]; removing it is remove_deadline. Pick a sensible date if they don't give one.

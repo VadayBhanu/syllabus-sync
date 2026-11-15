@@ -19,6 +19,7 @@ export type BlazeActionType =
   | "update_deadline"
   | "remove_deadline"
   | "attach_sources"
+  | "ui"
   | "mark_done"
   | "add_session"
   | "move_session"
@@ -38,6 +39,8 @@ export interface BlazeAction {
   time?: string;
   kind?: string;
   minutes?: number;
+  /** for type "ui": an app command like "theme:dark" or "view:plan", run without confirmation */
+  command?: string;
   /** learning/project stops: which stage they belong to */
   stage?: string;
   status?: "pending" | "applied" | "skipped" | "failed";

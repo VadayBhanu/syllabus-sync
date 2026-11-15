@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import type { Course, SyllabusEvent } from "@/lib/types";
 import type { StudySession } from "@/lib/plan";
+import { fromUiString, parseCommand, type UiCommand } from "@/lib/commands";
 import { buildContext, checkCitations, offlineAnswer, type BlazeAction, type BlazeMessage } from "@/lib/blaze";
 
 interface Props {
@@ -13,6 +14,8 @@ interface Props {
   dailyMinutes: number;
   /** apply one confirmed action; returns an error message if it couldn't */
   onAction: (a: BlazeAction) => string | undefined;
+  /** run an app command (theme, navigation, timer...) and return what to say */
+  onCommand?: (c: UiCommand) => string;
 }
 
 const STARTERS = [
@@ -22,7 +25,7 @@ const STARTERS = [
   "When and where is my next exam?",
 ];
 
-export default function Blaze({ courses, events, sessions, online, dailyMinutes, onAction }: Props) {
+export default function Blaze({ courses, events, sessions, online, dailyMinutes, onAction, onCommand }: Props) {
   const [open, setOpen] = useState(false);
   const [msgs, setMsgs] = useState<BlazeMessage[]>([]);
   const [input, setInput] = useState("");
@@ -111,7 +114,11 @@ export default function Blaze({ courses, events, sessions, online, dailyMinutes,
     setInput("");
     setBusy(true);
     let reply: BlazeMessage;
-    if (!online) {
+    // app commands ("dark mode", "open the oracle", "plan my day") run here, instantly and offline
+    const cmd = onCommand ? parseCommand(question, courses.map((c) => c.code)) : null;
+    if (cmd && onCommand) {
+      reply = { role: "blaze", text: onCommand(cmd) };
+    } else if (!online) {
       reply = offlineAnswer(question, courses, events);
     } else {
       try {
@@ -130,7 +137,16 @@ export default function Blaze({ courses, events, sessions, online, dailyMinutes,
             text: data.answer,
             citations: checkCitations(data.citations ?? [], courses),
             followUps: data.followUps,
-            actions: (data.actions ?? []).filter((a: BlazeAction) => a?.type && a?.summary).map((a: BlazeAction) => ({ ...a, status: "pending" as const })),
+            actions: (data.actions ?? [])
+              .filter((a: BlazeAction) => a?.type && a?.summary)
+              .map((a: BlazeAction) => {
+                // UI commands are harmless, so they run now; data changes wait for Apply
+                if (a.type !== "ui") return { ...a, status: "pending" as const };
+                const c = fromUiString(a.command ?? "");
+                if (!c || !onCommand) return { ...a, status: "failed" as const, error: "unknown command" };
+                onCommand(c);
+                return { ...a, status: "applied" as const };
+              }),
           };
         } else {
           reply = { ...offlineAnswer(question, courses, events), text: `${data.error ?? "Blaze is offline."} Here's what I can find on my own:\n\n${offlineAnswer(question, courses, events).text}` };
