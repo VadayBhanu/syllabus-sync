@@ -18,6 +18,21 @@ describe("Trojan offline mode", () => {
     const a = offlineAnswer("what is the late policy", [course], events, NOW);
     expect(a.citations?.[0].quote).toContain("Late policy");
   });
+  it("plans study sessions offline as actions to apply", () => {
+    const a = offlineAnswer("Plan my study time for the next 3 days", [course], events, NOW);
+    expect(a.actions?.length).toBeGreaterThan(0);
+    expect(a.actions!.length).toBeLessThanOrEqual(3);
+    for (const x of a.actions!) {
+      expect(x.type).toBe("add_session");
+      expect(x.date! >= "2026-11-14" && x.date! <= "2026-11-16").toBe(true);
+      expect(events.some((e) => e.id === x.id)).toBe(true);
+    }
+  });
+  it("quotes the grading breakdown offline", () => {
+    const a = offlineAnswer("How is my grade calculated in each class?", [course], events, NOW);
+    expect(a.citations?.some((c) => /%/.test(c.quote))).toBe(true);
+    expect(a.actions).toBeUndefined();
+  });
   it("says so when nothing matches", () => {
     expect(offlineAnswer("parking zebra", [course], events, NOW).text).toMatch(/couldn't find/);
   });

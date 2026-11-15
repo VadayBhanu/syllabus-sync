@@ -30,6 +30,7 @@ export default function Trojan({ courses, events, sessions, online, dailyMinutes
   const [msgs, setMsgs] = useState<TrojanMessage[]>([]);
   const [input, setInput] = useState("");
   const [busy, setBusy] = useState(false);
+  const [reveal, setReveal] = useState(false);
   // Voice: browser speech recognition to ask, speech synthesis to answer. No keys needed.
   const [speak, setSpeak] = useState(false);
   const [listening, setListening] = useState(false);
@@ -121,8 +122,12 @@ export default function Trojan({ courses, events, sessions, online, dailyMinutes
     } else if (!online) {
       reply = offlineAnswer(question, courses, events);
     } else {
+      // a slow or failed call never stalls the demo: give up after 25s and answer locally
+      const ctl = new AbortController();
+      const timer = setTimeout(() => ctl.abort(), 25_000);
       try {
         const res = await fetch("/api/blaze", {
+          signal: ctl.signal,
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -149,10 +154,12 @@ export default function Trojan({ courses, events, sessions, online, dailyMinutes
               }),
           };
         } else {
-          reply = { ...offlineAnswer(question, courses, events), text: `${data.error ?? "Trojan is offline."} Here's what I can find on my own:\n\n${offlineAnswer(question, courses, events).text}` };
+          reply = offlineAnswer(question, courses, events);
         }
       } catch {
         reply = offlineAnswer(question, courses, events);
+      } finally {
+        clearTimeout(timer);
       }
     }
     setMsgs((m) => [...m, reply]);
@@ -178,16 +185,32 @@ export default function Trojan({ courses, events, sessions, online, dailyMinutes
     );
   }
 
+  // The horse rolls in and its hatch swings open to let Trojan out. Skipped for reduced motion.
+  function openHatch() {
+    const calm = typeof window !== "undefined" && window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+    if (!calm) {
+      setReveal(true);
+      setTimeout(() => setReveal(false), 1500);
+    }
+    setOpen(true);
+  }
+
   askRef.current = ask;
   return (
     <>
       {!open && (
-        <button className="blaze-fab" onClick={() => setOpen(true)} aria-label="Ask Trojan, your study assistant">
+        <button className="blaze-fab" onClick={() => openHatch()} aria-label="Ask Trojan, your study assistant">
           <Horse /> Ask Trojan
         </button>
       )}
+      {reveal && (
+        <div className="reveal" aria-hidden="true">
+          <div className="reveal-horse"><Horse size={150} hatch /></div>
+          <div className="reveal-glow" />
+        </div>
+      )}
       {open && (
-        <aside className="blaze" role="dialog" aria-label="Trojan study assistant">
+        <aside className={`blaze ${reveal ? "emerging" : ""}`} role="dialog" aria-label="Trojan study assistant">
           <header className="blaze-head">
             <Horse />
             <div className="grow">
@@ -225,6 +248,7 @@ export default function Trojan({ courses, events, sessions, online, dailyMinutes
                 {m.role === "blaze" && <span className="avatar"><Horse size={22} /></span>}
               <div className={`bubble from-${m.role}`}>
                 <div style={{ whiteSpace: "pre-wrap" }}>{m.text}</div>
+                {m.offline && <div className="tiny muted" style={{ marginTop: 4 }}>Answered on this device, no AI call needed</div>}
                 {m.actions && m.actions.length > 0 && (
                   <div className="actions">
                     <div className="tiny muted">Trojan wants to make {m.actions.length === 1 ? "this change" : `${m.actions.length} changes`}. Nothing happens until you apply.</div>
@@ -306,7 +330,7 @@ export default function Trojan({ courses, events, sessions, online, dailyMinutes
 }
 
 /** Trojan is a wooden horse on wheels, with a little hatch where the answers hide. Original artwork. */
-export function Horse({ size = 26 }: { size?: number }) {
+export function Horse({ size = 26, hatch = false }: { size?: number; hatch?: boolean }) {
   return (
     <svg width={size} height={size} viewBox="0 0 32 32" aria-hidden="true">
       <path d="M7 14 Q2.5 15.5 3.5 21" fill="none" stroke="#7a4b22" strokeWidth="1.6" strokeLinecap="round" />
@@ -322,8 +346,17 @@ export function Horse({ size = 26 }: { size?: number }) {
       <path d="M21 13.5 L24.6 4.6 L28 5.8 L25.8 14 Z" fill="#c8894a" />
       <rect x="6" y="11.5" width="20.5" height="8.5" rx="3" fill="#c8894a" />
       <path d="M8 14 H24 M8 17.3 H24" stroke="#a8703a" strokeWidth="0.6" />
-      <rect x="13" y="13.2" width="5.4" height="4.8" rx="0.6" fill="#f6c453" stroke="#4a2c12" strokeWidth="0.9" />
-      <path d="M15.7 13.2 V18" stroke="#4a2c12" strokeWidth="0.6" />
+      {hatch ? (
+        <>
+          <rect x="13" y="13.2" width="5.4" height="4.8" rx="0.6" fill="#fff4c2" className="hatch-light" />
+          <rect x="13" y="13.2" width="5.4" height="4.8" rx="0.6" fill="#a8703a" stroke="#4a2c12" strokeWidth="0.9" className="hatch-door" />
+        </>
+      ) : (
+        <>
+          <rect x="13" y="13.2" width="5.4" height="4.8" rx="0.6" fill="#f6c453" stroke="#4a2c12" strokeWidth="0.9" />
+          <path d="M15.7 13.2 V18" stroke="#4a2c12" strokeWidth="0.6" />
+        </>
+      )}
       <path d="M24 3.8 L31 5.8 L30.4 9.2 L25.6 8.4 Z" fill="#c8894a" />
       <path d="M25 4.2 L25.8 1.2 L27.4 4.6 Z" fill="#a8703a" />
       <path d="M24.4 5 L21.6 12.6" stroke="#7a4b22" strokeWidth="1.4" strokeLinecap="round" />

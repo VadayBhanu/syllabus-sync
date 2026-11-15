@@ -131,6 +131,38 @@ export function offlineAnswer(q: string, courses: Course[], events: SyllabusEven
     };
   };
 
+  // "plan my study time for the next 3 days": propose study sessions for what's coming up
+  if (/\b(plan|schedule)\b.*\b(study|time|sessions?|days?|week)\b|\bstudy plan\b/.test(lower)) {
+    const n = Math.min(7, Math.max(1, Number(lower.match(/next (\d+) days?/)?.[1]) || 3));
+    const soon = graded.filter((e) => e.date > today && e.date <= addDays(today, 14));
+    const pick = [...soon].sort((a, b) => (b.weight ?? 5) - (a.weight ?? 5) || a.date.localeCompare(b.date)).slice(0, n);
+    if (!pick.length) return { role: "blaze", offline: true, text: "Nothing graded is due in the next two weeks, so there's nothing to plan around yet. Good time to get ahead.", followUps: ["What's due next week?"] };
+    pick.sort((a, b) => a.date.localeCompare(b.date));
+    const actions: TrojanAction[] = pick.map((e, i) => {
+      const date = addDays(today, Math.min(i, n - 1));
+      const day = date < e.date ? date : today;
+      const minutes = e.kind === "exam" ? 90 : (e.weight ?? 0) >= 10 ? 75 : 60;
+      return { type: "add_session", id: e.id, date: day, minutes, title: `Study for ${e.title}`, summary: `${prettyDate(day)}: ${minutes} min on ${courses.find((c) => c.id === e.courseId)?.code ?? ""} ${e.title}`.replace(/\s+/g, " "), status: "pending" };
+    });
+    return {
+      role: "blaze",
+      offline: true,
+      text: `Here's a ${n}-day plan built around what counts most:\n${list(pick)}\nApply the sessions you want and they go straight into your work plan.`,
+      actions,
+      followUps: ["What's due this week?", "When is my next exam?"],
+    };
+  }
+
+  // "how is my grade calculated": the grading lines from each syllabus, quoted exactly
+  if (/\b(grade|grading|graded|weight|worth|percent|breakdown)\b/.test(lower) && !/\bneed\b/.test(lower)) {
+    const cites: TrojanCitation[] = [];
+    for (const c of courses) {
+      const lines = (c.text ?? "").split("\n").map((l) => l.trim()).filter((l) => /\d\s?%/.test(l) && l.length < 160 && /[a-z]{3}/i.test(l));
+      for (const line of lines.slice(0, 5)) cites.push({ course: c.code, quote: line, verified: true });
+    }
+    if (cites.length) return { role: "blaze", offline: true, text: "Here's how each class weighs your grade, straight from the syllabi. The Oracle tab can tell you what you need on the final.", citations: cites.slice(0, 10), followUps: ["When is my next exam?", "Plan my study time for the next 3 days"] };
+  }
+
   if (/\btoday\b/.test(lower)) return range(today, today, "today");
   if (/\btomorrow\b/.test(lower)) return range(addDays(today, 1), addDays(today, 1), "tomorrow");
   if (/next week/.test(lower)) {
