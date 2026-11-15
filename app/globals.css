@@ -415,3 +415,13 @@ select.btn { padding-right: 6px; }
 .pill.k-known { background: #f6c453; color: #3a2a00; } .pill.k-covered { background: #eadcb8; color: #4a3a10; } .pill.k-suspect { background: #fde3cf; color: #8a3f0e; }
 .pill.k-gap { background: #fde0dc; color: #a32a1c; } .pill.k-next { background: #dde8fb; color: #24467f; } .pill.k-locked { background: #e5e8ee; color: #4a5a75; }
 @media (max-width: 860px) { .kgrid { grid-template-columns: 1fr; } }
+
+/* autopilot dashboard and AI builder */
+.dgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 10px; margin-top: 10px; }
+.dcard { border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; background: var(--bg); display: grid; gap: 4px; align-content: start; }
+.dbig { font-family: Fraunces, Georgia, serif; font-size: 30px; font-weight: 700; line-height: 1.1; }
+.bchecks { display: flex; flex-wrap: wrap; gap: 4px 12px; }
+.bchecks .ok { color: #1f6b35; }
+.bchecks .bad { color: #a32a1c; font-weight: 600; }
+.bframe { width: 100%; height: 360px; border: 1px dashed var(--line); border-radius: 12px; background: #fffdf8; }
+.bcode { max-height: 360px; overflow: auto; font: 12px/1.5 ui-monospace, monospace; background: var(--bg); border: 1px solid var(--line); border-radius: 10px; padding: 10px; margin: 0; white-space: pre; }

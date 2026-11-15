@@ -61,3 +61,11 @@ describe("knowledge gap command", () => {
     expect(parseCommand("What should I learn next?")).toMatchObject({ type: "gaps" });
   });
 });
+
+describe("autopilot commands", () => {
+  it("builds trackers and opens the dashboard", () => {
+    expect(parseCommand("Track my gym sessions 3 times a week")).toEqual({ type: "tracker", spec: { title: "Gym sessions", target: 3, unit: "times", period: "week" } });
+    expect(parseCommand("build me a dashboard")).toEqual({ type: "dashboard" });
+    expect(parseCommand("turn on dark mode")).toEqual({ type: "theme", value: "dark" });
+  });
+});

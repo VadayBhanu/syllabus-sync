@@ -13,6 +13,8 @@ import { COURSE_COLORS, load, save, uid } from "@/lib/storage";
 import { MESSY_SAMPLES, SAMPLES } from "@/lib/sample";
 import Recovery from "./Recovery";
 import KnowledgeMap from "./KnowledgeMap";
+import Dashboard from "./Dashboard";
+import type { Tracker } from "@/lib/trackers";
 import { recover, weekLoads } from "@/lib/recovery";
 import Upload from "./Upload";
 import NextUp from "./NextUp";
@@ -41,7 +43,7 @@ import { fmtMinutes } from "@/lib/plan";
 import { buildPlan, type StudySession } from "@/lib/plan";
 import { addDays, ymd } from "@/lib/dates";
 
-type View = "voyage" | "learn" | "plan" | "oracle" | "knowledge" | "calendar" | "list";
+type View = "voyage" | "learn" | "plan" | "oracle" | "knowledge" | "dashboard" | "calendar" | "list";
 
 interface ImportNote {
   course: string;
@@ -63,6 +65,21 @@ export default function App() {
   const [sessions, setSessions] = useState<StudySession[]>([]);
   const [touring, setTouring] = useState(false);
   const [focus, setFocus] = useState<{ session: StudySession | null } | null>(null);
+  const [trackers, setTrackersState] = useState<Tracker[]>([]);
+  useEffect(() => {
+    try {
+      const v = JSON.parse(localStorage.getItem("syllabus-sync:trackers") ?? "[]");
+      if (Array.isArray(v)) setTrackersState(v);
+    } catch {}
+  }, []);
+  const setTrackers = (t: Tracker[]) => {
+    setTrackersState(t);
+    try {
+      localStorage.setItem("syllabus-sync:trackers", JSON.stringify(t));
+    } catch {}
+  };
+  const trackersRef = useRef<Tracker[]>([]);
+  trackersRef.current = trackers;
   const [gapHint, setGapHint] = useState<{ score?: number } | null>(null);
   const [recovering, setRecovering] = useState<{ days: number; auto: boolean } | null>(null);
   const [planOpts, setPlanOpts] = useState({ dailyMinutes: 180, weekends: true });
@@ -374,7 +391,7 @@ export default function App() {
 
   // Everything Trojan can do to the app itself. Returns what Trojan says back.
   const runCommand = (c: UiCommand): string => {
-    const VIEW_NAME = { voyage: "the voyage map", learn: mode === "project" ? "the project plan" : "the learning path", plan: "your work plan", oracle: "the Oracle", knowledge: "your star chart", calendar: "the calendar", list: `all your ${noun}s` };
+    const VIEW_NAME = { voyage: "the voyage map", learn: mode === "project" ? "the project plan" : "the learning path", plan: "your work plan", oracle: "the Oracle", knowledge: "your star chart", dashboard: "your dashboard", calendar: "the calendar", list: `all your ${noun}s` };
     switch (c.type) {
       case "theme":
         setTheme(c.value);
@@ -417,6 +434,24 @@ export default function App() {
         });
         return `${c.value === "hide" ? "Hid" : "Showing"} ${target.code}.`;
       }
+      case "tracker": {
+        const s = c.spec;
+        const dup = trackersRef.current.find((x) => x.title.toLowerCase() === s.title.toLowerCase());
+        if (dup) {
+          setDraft(null);
+          setView("dashboard");
+          return `You already track ${dup.title}. I opened your dashboard so you can log it.`;
+        }
+        const t: Tracker = { ...s, id: uid("t"), created: today, log: {} };
+        setTrackers([...trackersRef.current, t]);
+        setDraft(null);
+        setView("dashboard");
+        return `Built a tracker: ${s.title}, ${s.target} ${s.unit} a ${s.period}. It's on your dashboard with a progress ring and a streak. Tap +1 when you do it; the × on the card removes it.`;
+      }
+      case "dashboard":
+        setDraft(null);
+        setView("dashboard");
+        return "Your dashboard is open: what's due this week, your next exam, work plan progress, and any trackers you've asked for. The AI Builder at the bottom drafts brand-new features.";
       case "gaps": {
         if (mode !== "academic") setMode("academic");
         setGapHint({ score: c.score });
@@ -459,7 +494,7 @@ export default function App() {
   const empty = ready && modeCourses.length === 0;
   const graded = mode === "academic" ? visible.filter((e) => GRADED.includes(e.kind)) : visible.filter((e) => !e.done);
   const noun = mode === "academic" ? "deadline" : mode === "learning" ? "topic" : "task";
-  const tabs: View[] = mode === "academic" ? ["voyage", "plan", "knowledge", "oracle", "calendar", "list"] : ["voyage", "learn", "plan", "calendar", "list"];
+  const tabs: View[] = mode === "academic" ? ["voyage", "plan", "knowledge", "oracle", "dashboard", "calendar", "list"] : ["voyage", "learn", "plan", "dashboard", "calendar", "list"];
   const shown: View = tabs.includes(view) ? view : "voyage";
   const preview = draft && (
     <RoadmapPreview
@@ -600,7 +635,7 @@ export default function App() {
             <div className="tabs" role="tablist" aria-label="View">
               {tabs.map((v) => (
                 <button key={v} role="tab" className="tab" aria-selected={shown === v} onClick={() => { setDraft(null); setView(v); }}>
-                  {v === "voyage" ? "Voyage map" : v === "learn" ? (mode === "project" ? "Project plan" : "Learning path") : v === "plan" ? "Work plan" : v === "oracle" ? "The Oracle" : v === "knowledge" ? "Star chart" : v === "calendar" ? "Calendar" : mode === "academic" ? "All deadlines" : `All ${noun}s`}
+                  {v === "voyage" ? "Voyage map" : v === "learn" ? (mode === "project" ? "Project plan" : "Learning path") : v === "plan" ? "Work plan" : v === "oracle" ? "The Oracle" : v === "knowledge" ? "Star chart" : v === "dashboard" ? "Dashboard" : v === "calendar" ? "Calendar" : mode === "academic" ? "All deadlines" : `All ${noun}s`}
                 </button>
               ))}
             </div>
@@ -643,6 +678,18 @@ export default function App() {
               )}
               {!draft && shown === "oracle" && <Oracle courses={courses} />}
               {!draft && shown === "calendar" && <CalendarView events={visible} hazards={hazards} courses={courseById} now={now} onOpen={(e) => setEditing(e)} />}
+              {!draft && shown === "dashboard" && (
+                <Dashboard
+                  courses={modeCourses}
+                  events={modeEvents}
+                  sessions={modeSessions}
+                  today={today}
+                  trackers={trackers}
+                  ai={server.ai}
+                  onTrackers={setTrackers}
+                  onAsk={(q) => window.dispatchEvent(new CustomEvent("blaze:ask", { detail: q }))}
+                />
+              )}
               {!draft && shown === "knowledge" && (
                 <KnowledgeMap
                   courses={modeCourses}
