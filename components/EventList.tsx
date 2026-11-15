@@ -65,6 +65,7 @@ export default function EventList({ events, hazards, courses, onOpen, onToggle }
                     {e.confidence !== "high" && <span className="badge low" title={e.note}>check: {e.note ?? "unsure"}</span>}
                     {flagged.has(e.id) && <span className="badge hz">conflict</span>}
                   </div>
+                  {e.source && <div className="tiny muted src-line" title="The exact line this deadline was read from">↳ “{e.source.length > 140 ? e.source.slice(0, 140) + "…" : e.source}”</div>}
                 </div>
                 <button className="btn small" onClick={() => onOpen(e)}>Edit</button>
               </div>

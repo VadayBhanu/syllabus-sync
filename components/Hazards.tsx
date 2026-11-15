@@ -3,15 +3,18 @@
 import { findCyclops, findLotus, type Hazard } from "@/lib/conflicts";
 import type { Course, SyllabusEvent } from "@/lib/types";
 import { daysBetween, prettyDate, ymd } from "@/lib/dates";
+import type { WeekLoad } from "@/lib/recovery";
 
 interface Props {
   hazards: Hazard[];
   events: SyllabusEvent[];
   courses: Map<string, Course>;
   onMarkDone: (ids: string[]) => void;
+  weeks?: WeekLoad[];
+  onRecover?: () => void;
 }
 
-export default function Hazards({ hazards, events, courses, onMarkDone }: Props) {
+export default function Hazards({ hazards, events, courses, onMarkDone, weeks = [], onRecover }: Props) {
   const today = ymd(new Date());
   const cyclops = findCyclops(events, today);
   const lotus = findLotus(events, today);
@@ -28,6 +31,20 @@ export default function Hazards({ hazards, events, courses, onMarkDone }: Props)
             : "Import a syllabus to see conflicts."}
       </p>
       <div className="stack" style={{ gap: 10 }}>
+        {weeks.filter((w) => w.impossible && w.due.length).slice(0, 2).map((w) => (
+          <div key={w.start} className="small impossible">
+            <span className="badge hz">🌀 Charybdis: an impossible week</span>{" "}
+            <b>Week of {prettyDate(w.start)}</b>
+            <div className="muted">
+              {Math.round(w.minutes / 60)}h of work planned against {Math.round(w.capacity / 60)}h you have ({Math.round((w.minutes / w.capacity) * 100)}%), with {w.due.length} graded item{w.due.length > 1 ? "s" : ""} due:{" "}
+              {w.due.slice(0, 4).map((e) => `${courses.get(e.courseId)?.code ?? ""} ${e.title}`).join(", ")}
+              {w.due.length > 4 ? ` and ${w.due.length - 4} more` : ""}. Start earlier, raise your hours, or ask for an extension now.
+            </div>
+          </div>
+        ))}
+        {onRecover && (
+          <button className="btn small" onClick={onRecover} title="Lost days to illness or an emergency? Re-plan around them.">🤒 Lost some days? Save my semester</button>
+        )}
         {cyclops && (
           <div className="small">
             <span className="badge hz">👁 The Cyclops</span>{" "}

@@ -56,7 +56,65 @@ Problem Set 6 ................ due 12/2
 Final exam ................... Dec 9, 11:00 AM (25%)
 `;
 
+// Three messier ones for the five-syllabus stress test: a table pasted from Word, a prose-heavy
+// writing course, and a lab course with ordinals, abbreviations and a moved exam.
+export const SAMPLE_PHYS = `PHYS 1444 General Technical Physics II
+UTA Physics Dept. | Fall 2026 | Sec 003 | SH 101 TuTh 11:00-12:20
+
+GRADE BREAKDOWN:   HW (Mastering) 15% | Labs 15% | Exam I 20% | Exam II 20% | Final 30%
+
+Date       | Topic                         | Due
+-----------|-------------------------------|------------------------------
+Thu 9/10   | Electric fields               | Mastering HW 1
+Thu 10/1   | Exam I (20%)                  |
+Tue 10/27  | Circuits                      | Lab report 4
+Tue 11/17  | Magnetism                     | Mastering HW 9 due 11:59pm
+Thu 11/19  | ** EXAM II (20%) **  SH 101   | (moved from 11/12, see Canvas)
+Fri 11/20  |                               | Lab report 6 due
+Tue 12/1   | Optics                        | Mastering HW 11
+Final Exam: Tues. Dec. 8, 11:00am-1:30pm (30%)
+`;
+
+export const SAMPLE_ENGL = `ENGL 1302 Rhetoric and Composition II
+Fall 2026
+
+Welcome! This semester we will build one researched argument in stages. Please read every
+assignment sheet on Canvas, since the dates below are the ones that count for your grade.
+
+Major assignments and weights
+  - Proposal memo (5%), due Friday, September 25 by 11:59 pm
+  - Annotated bibliography (15%), due Monday, November 16 before class
+  - Researched argument essay, final draft (30%), due Friday, November 20 by 11:59pm
+  - Reflection portfolio (10%), due December 4
+
+Peer review workshop is Wednesday, November 18 in class; bring two printed copies of your draft.
+No class Nov 25-27 (Thanksgiving).
+`;
+
+export const SAMPLE_OS = `CSE 3320 Operating Systems
+Fall 2026, Section 001
+
+Grading: Programming assignments 40%, Quizzes 10%, Midterm 20%, Final 30%
+
+Schedule (subject to change)
+Aug. 27th  - Intro, processes
+Sept 15th  - Assignment 1 (shell) due
+Oct 8th    - Midterm exam (20%)
+Nov. 13th  - Assignment 3 (threads) released
+Nov. 19th  - Quiz 4
+Nov. 21st  - Assignment 3 (threads) due, 11:59 PM (10%)
+Dec. 3rd   - Assignment 4 (memory allocator) due (10%)
+Dec. 10th  - Final exam, 8:00 AM (30%)
+`;
+
 export const SAMPLES = [
   { label: "CSE 3318 Algorithms", fileName: "cse3318-sample.txt", text: SAMPLE_CSE },
   { label: "MATH 3330 Linear Algebra", fileName: "math3330-sample.txt", text: SAMPLE_MATH },
+];
+
+export const MESSY_SAMPLES = [
+  ...SAMPLES,
+  { label: "PHYS 1444 Physics II", fileName: "phys1444-table.docx.txt", text: SAMPLE_PHYS },
+  { label: "ENGL 1302 Composition II", fileName: "engl1302-prose.txt", text: SAMPLE_ENGL },
+  { label: "CSE 3320 Operating Systems", fileName: "cse3320-schedule.txt", text: SAMPLE_OS },
 ];

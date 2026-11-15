@@ -10,7 +10,9 @@ import type { ParseResult } from "@/lib/types";
 import { findHazards } from "@/lib/conflicts";
 import { buildIcs } from "@/lib/ics";
 import { COURSE_COLORS, load, save, uid } from "@/lib/storage";
-import { SAMPLES } from "@/lib/sample";
+import { MESSY_SAMPLES, SAMPLES } from "@/lib/sample";
+import Recovery from "./Recovery";
+import { recover, weekLoads } from "@/lib/recovery";
 import Upload from "./Upload";
 import NextUp from "./NextUp";
 import VoyageMap from "./VoyageMap";
@@ -60,6 +62,7 @@ export default function App() {
   const [sessions, setSessions] = useState<StudySession[]>([]);
   const [touring, setTouring] = useState(false);
   const [focus, setFocus] = useState<{ session: StudySession | null } | null>(null);
+  const [recovering, setRecovering] = useState<{ days: number; auto: boolean } | null>(null);
   const [planOpts, setPlanOpts] = useState({ dailyMinutes: 180, weekends: true });
   const [server, setServer] = useState({ ai: false, sync: false });
   const [useAi, setUseAi] = useState(true);
@@ -257,12 +260,12 @@ export default function App() {
     [],
   );
 
-  const loadSamples = () => {
+  const loadSamples = (list: typeof SAMPLES = SAMPLES) => {
     // import sequentially so the second sees the first course
     let cs: Course[] = [...courses];
     let es: SyllabusEvent[] = [...events];
     const ns: ImportNote[] = [];
-    for (const s of SAMPLES) {
+    for (const s of list) {
       const r = parseSyllabus(s.text, new Date());
       const code = r.courseCode ?? s.label;
       const existing = cs.find((c) => c.code === code);
@@ -275,7 +278,7 @@ export default function App() {
     setCourses(cs);
     setEvents(es);
     setNotes(ns);
-    setToast("Loaded two sample syllabi");
+    setToast(list.length > 2 ? `Loaded ${list.length} messy syllabi: tables, prose, ordinals and a moved exam` : "Loaded two sample syllabi");
   };
 
   const startLearning = (track: Track, opts: { start: string; hoursPerWeek: number; due?: string }) => {
@@ -412,6 +415,16 @@ export default function App() {
         });
         return `${c.value === "hide" ? "Hid" : "Showing"} ${target.code}.`;
       }
+      case "recover": {
+        if (mode !== "academic") setMode("academic");
+        const acad = courses.filter((x) => modeOf(x) === "academic");
+        if (!acad.length) return "Add your syllabi first, then tell me how many days you lost and I'll re-plan around them.";
+        const ids = new Set(acad.map((x) => x.id));
+        const r = recover(events.filter((e) => ids.has(e.courseId)), sessions.filter((x) => ids.has(x.courseId)), acad, { from: today, days: c.days, dailyMinutes: planOpts.dailyMinutes, weekends: planOpts.weekends, today }, () => uid("s"));
+        setRecovering({ days: c.days, auto: true });
+        const ext = r.extensions.length ? ` ${r.extensions.length} deadline${r.extensions.length > 1 ? "s fall" : " falls"} on your sick days, so I drafted extension emails.` : "";
+        return `I'm sorry you're sick. I cleared ${c.days} day${c.days > 1 ? "s" : ""} and re-planned everything after: you go from ${r.summary.originalPrepared}% to ${r.summary.recoveryPrepared}% prepared, and deadlines at risk drop from ${r.summary.originalAtRisk} to ${r.summary.recoveryAtRisk}.${ext} The recovery screen shows both futures and why each task moved. Nothing changes until you accept it.`;
+      }
       case "plan_today": {
         rebuild();
         setDraft(null);
@@ -523,7 +536,7 @@ export default function App() {
                 <button className="btn primary" style={{ justifySelf: "start", padding: "10px 18px" }} onClick={() => { loadSamples(); setTouring(true); }}>
                   ▶ Take the 60-second guided demo
                 </button>
-                <Upload onText={importText} onCalendar={importCalendar} onSamples={loadSamples} ai={server.ai} useAi={useAi} setUseAi={setUseAi} />
+                <Upload onText={importText} onCalendar={importCalendar} onSamples={() => loadSamples()} onMessy={() => loadSamples(MESSY_SAMPLES)} ai={server.ai} useAi={useAi} setUseAi={setUseAi} />
               </>
             ) : mode === "learning" ? (
               <LearnStart onStart={onPreview} ai={server.ai} />
@@ -625,6 +638,8 @@ export default function App() {
             </div>
             <aside className="stack">
               <Hazards
+                weeks={mode === "academic" ? weekLoads(modeSessions, modeEvents, planOpts.dailyMinutes, planOpts.weekends, today, 6) : []}
+                onRecover={mode === "academic" ? () => setRecovering({ days: 3, auto: false }) : undefined}
                 hazards={hazards}
                 events={visible}
                 courses={courseById}
@@ -645,7 +660,7 @@ export default function App() {
                   }}
                 />
               )}
-              {mode === "academic" && <Upload compact onText={importText} onCalendar={importCalendar} onSamples={loadSamples} ai={server.ai} useAi={useAi} setUseAi={setUseAi} />}
+              {mode === "academic" && <Upload compact onText={importText} onCalendar={importCalendar} onSamples={() => loadSamples()} ai={server.ai} useAi={useAi} setUseAi={setUseAi} />}
               {mode === "learning" && <LearnStart compact onStart={onPreview} ai={server.ai} />}
               {mode === "project" && <ProjectStart compact onPreview={onPreview} ai={server.ai} />}
             </aside>
@@ -680,6 +695,28 @@ export default function App() {
         />
       )}
       {touring && !empty && mode === "academic" && <Tour onView={(v) => setView(v)} onClose={() => setTouring(false)} />}
+      {recovering && (
+        <Recovery
+          courses={courses.filter((x) => modeOf(x) === "academic")}
+          events={events.filter((e) => courses.some((x) => x.id === e.courseId && modeOf(x) === "academic"))}
+          sessions={sessions.filter((x) => courses.some((c) => c.id === x.courseId && modeOf(c) === "academic"))}
+          dailyMinutes={planOpts.dailyMinutes}
+          weekends={planOpts.weekends}
+          today={today}
+          days={recovering.days}
+          autoRun={recovering.auto}
+          makeId={() => uid("s")}
+          onClose={() => setRecovering(null)}
+          onAccept={(r) => {
+            const ids = new Set(courses.filter((x) => modeOf(x) === "academic").map((x) => x.id));
+            setSessions((prev) => [...prev.filter((x) => !ids.has(x.courseId) || x.done || x.removed || x.date < today), ...r.sessions.filter((x) => x.date >= today)]);
+            setRecovering(null);
+            setDraft(null);
+            setView("plan");
+            setToast(`Recovery plan on. ${r.extensions.length ? `Send the ${r.extensions.length} extension email${r.extensions.length > 1 ? "s" : ""} today.` : ""}`);
+          }}
+        />
+      )}
       {focus && (
         <MastMode
           session={focus.session}

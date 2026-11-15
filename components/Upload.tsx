@@ -8,6 +8,7 @@ interface Props {
   onText: (text: string, fileName: string, asCode?: string) => Promise<void> | void;
   onCalendar: (groups: IcsCourseGroup[], label: string) => void;
   onSamples: () => void;
+  onMessy?: () => void;
   compact?: boolean;
   ai?: boolean;
   useAi?: boolean;
@@ -28,7 +29,7 @@ const SOURCES: { id: Source; label: string }[] = [
 
 const PASTE_KINDS = ["Syllabus", "MyMav class schedule", "Canvas page", "Other notes"];
 
-export default function Upload({ onText, onCalendar, onSamples, compact, ai, useAi, setUseAi }: Props) {
+export default function Upload({ onText, onCalendar, onSamples, onMessy, compact, ai, useAi, setUseAi }: Props) {
   const input = useRef<HTMLInputElement>(null);
   const [source, setSource] = useState<Source>("file");
   const [over, setOver] = useState(false);
@@ -227,6 +228,7 @@ export default function Upload({ onText, onCalendar, onSamples, compact, ai, use
       {error && <div className="notice error" role="alert">{error}</div>}
       <div className="row">
         {!compact && <button className="btn small primary" onClick={onSamples}>Try two sample UTA syllabi</button>}
+        {!compact && onMessy && <button className="btn small" onClick={onMessy} title="Five syllabi in five different messy formats">Stress test: 5 messy syllabi</button>}
         {!compact && <a className="btn small" href={`${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}/samples/hist1311-syllabus.pdf`} download>Sample PDF 1</a>}
         {!compact && <a className="btn small" href={`${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}/samples/phys1443-syllabus.pdf`} download>Sample PDF 2</a>}
         {ai && setUseAi && (

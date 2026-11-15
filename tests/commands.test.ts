@@ -42,3 +42,13 @@ describe("Trojan app commands", () => {
     expect(fromUiString("rm -rf")).toBeNull();
   });
 });
+
+describe("recovery command", () => {
+  it("understands sick days", () => {
+    expect(parseCommand("I just got sick and lost three days. Save my semester.")).toEqual({ type: "recover", days: 3 });
+    expect(parseCommand("i lsot 2 days to the flu")).toEqual({ type: "recover", days: 2 });
+    expect(parseCommand("save my semester")).toEqual({ type: "recover", days: 3 });
+    expect(parseCommand("Plan my study time for the next 3 days")).toBeNull();
+    expect(fromUiString("recover:4")).toEqual({ type: "recover", days: 4 });
+  });
+});

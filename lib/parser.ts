@@ -196,6 +196,11 @@ function cleanTitle(s: string): string {
     .replace(/[\s:;,\-–—(\[]+$/, "")
     .replace(/(\s+\b(due|on|by|at|is|are|will be|held|closes|opens|in class on|takes place)\b)+\s*$/i, "")
     .replace(/^(the|your|our)\s+/i, "")
+    .replace(/\*+/g, " ")
+    .replace(/\(?\s*\b(moved|rescheduled|changed|was)\s+from\b[^)]*\)?/gi, " ")
+    .replace(/,?\s*\bsee canvas\b\)?/gi, " ")
+    .replace(/\s{2,}/g, " ")
+    .replace(/[\s:;,\-–—(\[]+$/, "")
     .trim();
   // "due" alone, or just punctuation, is not a title
   if (/^(due|deadline|on|by|at|and|&)?$/i.test(t)) return "";
@@ -344,6 +349,11 @@ export function parseSyllabus(raw: string, today = new Date()): ParseResult {
     report.datesFound += dates.length;
 
     dates.forEach((d, k) => {
+      // "Exam II 11/19 (moved from 11/12)": the old date is history, not a deadline
+      if (/\b(moved|rescheduled|changed|postponed|pushed)\s+from\s*$|\b(was|previously|originally|formerly|instead of)\s*$/i.test(line.slice(0, d.start))) {
+        report.warnings.push(`Skipped ${line.slice(d.start, d.end)}: it's the old date of something that was moved`);
+        return;
+      }
       // Text that belongs to this date: between the previous date and the next one.
       const segStart = k === 0 ? 0 : dates[k - 1].end;
       const segEnd = k === dates.length - 1 ? line.length : dates[k + 1].start;
@@ -376,6 +386,9 @@ export function parseSyllabus(raw: string, today = new Date()): ParseResult {
           }
         }
       }
+
+      // "Assignment 3 released" is when work starts, not when it's due
+      if (kind && /\b(released|posted|assigned|available|handed out|goes out)\b/i.test(context) && !/\bdue\b/i.test(context)) kind = null;
 
       if (!kind) {
         report.skippedNoKeyword++;

@@ -11,6 +11,7 @@ export type UiCommand =
   | { type: "tour" }
   | { type: "export" }
   | { type: "plan_today" }
+  | { type: "recover"; days: number }
   | { type: "course"; value: "hide" | "show"; course: string };
 
 const VOCAB = [
@@ -18,6 +19,7 @@ const VOCAB = [
   "voyage", "map", "work", "plan", "schedule", "today", "todays", "oracle", "calendar", "list", "deadlines",
   "learning", "path", "project", "academic", "syllabus", "study", "self", "mast", "focus", "timer", "pomodoro",
   "tour", "demo", "take", "start", "stop", "export", "download", "prepare", "build", "make", "university", "roadmap", "grade", "calculator",
+  "sick", "lost", "lose", "missed", "semester", "save", "days", "three", "recover", "recovery",
 ];
 
 function lev(a: string, b: string): number {
@@ -78,6 +80,15 @@ export function parseCommand(text: string, courseCodes: string[] = []): UiComman
 
   if (/\b(prepare|plan|make|build|set up|organi[sz]e|show)\b.*\b(today|todays|my day)\b|\bplan my day\b|\btodays (work|schedule|plan)\b/.test(t)) return { type: "plan_today" };
 
+  // "I just got sick and lost three days. Save my semester."
+  const sick = /\b(sick|ill|flu|covid|hospital|lost|lose|missed)\b.*\bdays?\b|\bsave my (semester|week|grades?)\b|\b(recovery|recover) plan\b/.test(t);
+  if (sick) {
+    const NUM: Record<string, number> = { a: 1, one: 1, two: 2, couple: 2, three: 3, few: 3, four: 4, five: 5, six: 6, seven: 7, week: 7 };
+    const m = t.match(/\b(\d+|one|two|three|four|five|six|seven|couple|few)\b(?: of)? days?\b/) ?? t.match(/\b(a) week\b/);
+    const n = m ? (/^\d+$/.test(m[1]) ? Number(m[1]) : m[0].includes("week") ? 7 : NUM[m[1]] ?? 3) : 3;
+    return { type: "recover", days: Math.min(14, Math.max(1, n)) };
+  }
+
   if (/\b(mast|focus|pomodoro)\b|\bstart (a |the )?timer\b/.test(t)) return { type: "mast" };
   if (/\b(tour|demo|walkthrough)\b/.test(t) && !/\bproject\b/.test(t)) return { type: "tour" };
   if (/\b(export|download)\b.*\b(calendar|ics|deadlines|schedule)?\b/.test(t) && /\b(export|download)\b/.test(t)) return { type: "export" };
@@ -105,6 +116,7 @@ export function fromUiString(s: string): UiCommand | null {
   if (k === "mode" && ["academic", "learning", "project"].includes(v)) return { type: "mode", value: v as "academic" };
   if (k === "view" && ["voyage", "learn", "plan", "oracle", "calendar", "list"].includes(v)) return { type: "view", value: v as View };
   if (k === "mast" || k === "tour" || k === "export" || k === "plan_today") return { type: k } as UiCommand;
+  if (k === "recover") return { type: "recover", days: Math.min(14, Math.max(1, Number(v) || 3)) };
   return null;
 }
 
@@ -112,5 +124,5 @@ export const UI_COMMANDS = [
   "theme:dark", "theme:light", "theme:system",
   "mode:academic", "mode:learning", "mode:project",
   "view:voyage", "view:learn", "view:plan", "view:oracle", "view:calendar", "view:list",
-  "mast", "tour", "export", "plan_today",
+  "mast", "tour", "export", "plan_today", "recover:3",
 ];
